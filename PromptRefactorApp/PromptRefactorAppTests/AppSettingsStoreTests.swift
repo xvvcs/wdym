@@ -51,7 +51,26 @@ struct AppSettingsStoreTests {
     #expect(reloaded.settings.activeShortcutBinding == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
   }
 
-  @Test func settingsShortcutPresetFallsBackWhenPersistedValueIsInvalid() {
+  @Test func storePersistsCustomPromptTemplate() {
+    let fixture = testUserDefaults()
+    defer { clear(fixture) }
+
+    let store = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
+    store.updateCustomPromptTemplate("My template: {{task}}")
+
+    let reloaded = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
+
+    #expect(reloaded.settings.customPromptTemplate == "My template: {{task}}")
+  }
+
+  @Test func storeDefaultsCustomPromptTemplateToEmpty() {
+    let fixture = testUserDefaults()
+    defer { clear(fixture) }
+
+    let store = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
+
+    #expect(store.settings.customPromptTemplate == "")
+  }
     let fixture = testUserDefaults()
     defer { clear(fixture) }
 

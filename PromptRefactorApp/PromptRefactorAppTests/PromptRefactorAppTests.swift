@@ -47,6 +47,31 @@ struct PromptRefactorAppTests {
         #expect(options.style == .coding)
         #expect(options.language == "English")
         #expect(!options.includeClarifyingQuestions)
+        #expect(options.customTemplate == nil)
+    }
+
+    @Test func appRefactorPreferencesUsesCustomTemplateWhenProvided() {
+        let template = "Refactor this: {{task}}"
+        let preferences = AppRefactorPreferences(
+            outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
+            promptStyleRawValue: PromptStyle.general.rawValue,
+            includeClarifyingQuestions: true,
+            customPromptTemplate: template
+        )
+
+        let options = preferences.buildOptions()
+
+        #expect(options.customTemplate == template)
+    }
+
+    @Test func appRefactorPreferencesPassesNilCustomTemplateWhenEmpty() {
+        let preferences = AppRefactorPreferences(
+            customPromptTemplate: "   "
+        )
+
+        let options = preferences.buildOptions()
+
+        #expect(options.customTemplate == nil)
     }
 
     @Test func appRefactorPreferencesFallsBackToGeneralPromptStyleWhenInvalid() {

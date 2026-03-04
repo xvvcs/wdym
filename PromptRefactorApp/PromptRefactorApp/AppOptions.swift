@@ -35,6 +35,7 @@ struct AppRefactorPreferences {
     var outputModeRawValue: String = OutputMode.replaceAndCopy.rawValue
     var promptStyleRawValue: String = PromptStyle.general.rawValue
     var includeClarifyingQuestions = true
+    var customPromptTemplate: String = ""
 
     var outputMode: OutputMode {
         OutputMode.from(rawValue: outputModeRawValue)
@@ -45,10 +46,12 @@ struct AppRefactorPreferences {
     }
 
     func buildOptions(language: String = "English") -> RefactorBuildOptions {
-        RefactorBuildOptions(
+        let template = customPromptTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+        return RefactorBuildOptions(
             style: promptStyle,
             language: language,
-            includeClarifyingQuestions: includeClarifyingQuestions
+            includeClarifyingQuestions: includeClarifyingQuestions,
+            customTemplate: template.isEmpty ? nil : template
         )
     }
 }

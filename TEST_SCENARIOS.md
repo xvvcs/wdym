@@ -26,6 +26,8 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-002 | `outputModeBehaviorFlagsAreCorrect` | Output mode is mapped to action behavior flags | `shouldReplaceText` and `shouldCopyText` logic | Done |
 | APP-003 | `outputModeFallsBackToReplaceAndCopyForInvalidRawValue` | Stored output mode value is invalid | Safe default fallback behavior | Done |
 | APP-004 | `appRefactorPreferencesBuildsRefactorOptionsFromStoredValues` | Stored style and clarifying settings are loaded | Refactor option mapping from persisted settings | Done |
+| APP-004a | `appRefactorPreferencesUsesCustomTemplateWhenProvided` | Non-empty `customPromptTemplate` is stored | `buildOptions()` passes custom template string to `RefactorBuildOptions` | Done |
+| APP-004b | `appRefactorPreferencesPassesNilCustomTemplateWhenEmpty` | `customPromptTemplate` is blank/whitespace | `buildOptions()` passes `nil` template, using the built-in default | Done |
 | APP-005 | `appRefactorPreferencesFallsBackToGeneralPromptStyleWhenInvalid` | Stored style value is invalid | Safe style fallback to `.general` | Done |
 | APP-006 | `promptStyleDisplayTitlesMatchOptionsLabels` | Prompt styles are displayed in options picker | Stable style labels in options UI | Done |
 | APP-007 | `shortcutPresetFallsBackToDefaultWhenRawValueInvalid` | Stored shortcut preset value is invalid | Safe shortcut fallback to default (`Cmd+Shift+R`) | Done |
@@ -110,4 +112,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (7 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (53 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (58 tests)

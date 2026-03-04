@@ -16,6 +16,7 @@ struct AppSettings: Equatable {
   var useCustomShortcut: Bool
   var customShortcutKeyCode: UInt16
   var customShortcutModifiersRawValue: UInt
+  var customPromptTemplate: String
 
   static let `default` = AppSettings(
     outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
@@ -30,7 +31,8 @@ struct AppSettings: Equatable {
     shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue,
     useCustomShortcut: false,
     customShortcutKeyCode: ShortcutPreset.commandShiftR.binding.keyCode,
-    customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue
+    customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue,
+    customPromptTemplate: ""
   )
 
   var shortcutPreset: ShortcutPreset {
@@ -49,7 +51,8 @@ struct AppSettings: Equatable {
     AppRefactorPreferences(
       outputModeRawValue: outputModeRawValue,
       promptStyleRawValue: promptStyleRawValue,
-      includeClarifyingQuestions: includeClarifyingQuestions
+      includeClarifyingQuestions: includeClarifyingQuestions,
+      customPromptTemplate: customPromptTemplate
     )
   }
 }
@@ -139,6 +142,12 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     }
   }
 
+  func updateCustomPromptTemplate(_ value: String) {
+    updateSettings {
+      $0.customPromptTemplate = value
+    }
+  }
+
   private func updateSettings(_ mutation: (inout AppSettings) -> Void) {
     var updated = settings
     mutation(&updated)
@@ -164,6 +173,7 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(settings.useCustomShortcut, forKey: Keys.useCustomShortcut)
     userDefaults.set(Int(settings.customShortcutKeyCode), forKey: Keys.customShortcutKeyCode)
     userDefaults.set(settings.customShortcutModifiersRawValue, forKey: Keys.customShortcutModifiers)
+    userDefaults.set(settings.customPromptTemplate, forKey: Keys.customPromptTemplate)
   }
 
   private static func load(from userDefaults: UserDefaults) -> AppSettings {
@@ -224,6 +234,9 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       ? AppSettings.default.customShortcutModifiersRawValue
       : UInt(userDefaults.integer(forKey: Keys.customShortcutModifiers))
 
+    let customPromptTemplate =
+      userDefaults.string(forKey: Keys.customPromptTemplate) ?? AppSettings.default.customPromptTemplate
+
     return AppSettings(
       outputModeRawValue: outputMode,
       promptStyleRawValue: promptStyle,
@@ -237,7 +250,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       shortcutPresetRawValue: shortcutPreset,
       useCustomShortcut: useCustomShortcut,
       customShortcutKeyCode: customShortcutKeyCode,
-      customShortcutModifiersRawValue: customShortcutModifiersRawValue
+      customShortcutModifiersRawValue: customShortcutModifiersRawValue,
+      customPromptTemplate: customPromptTemplate
     )
   }
 }
@@ -256,4 +270,5 @@ private enum Keys {
   static let useCustomShortcut = "useCustomShortcut"
   static let customShortcutKeyCode = "customShortcutKeyCode"
   static let customShortcutModifiers = "customShortcutModifiers"
+  static let customPromptTemplate = "customPromptTemplate"
 }

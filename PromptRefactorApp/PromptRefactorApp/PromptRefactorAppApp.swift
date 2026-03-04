@@ -201,6 +201,43 @@ private struct OptionsView: View {
         }
 
         settingsCard(
+          title: "Custom Template",
+          subtitle: "Override the default pre-prompt. Use {{task}} where the normalized input should appear."
+        ) {
+          TextEditor(text: customPromptTemplateBinding)
+            .font(.system(.body, design: .monospaced))
+            .foregroundStyle(.white)
+            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+              RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.08))
+                .overlay(
+                  RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+            )
+            .frame(minHeight: 100)
+            .accessibilityIdentifier("options.editor.customTemplate")
+
+          HStack(spacing: 10) {
+            Button("Reset to Default") {
+              settingsStore.updateCustomPromptTemplate("")
+            }
+            .buttonStyle(OutlineActionButtonStyle())
+
+            Text(
+              settingsStore.settings.customPromptTemplate.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ).isEmpty ? "Using built-in template" : "Using custom template"
+            )
+            .font(.caption)
+            .foregroundStyle(Color.white.opacity(0.62))
+          }
+        }
+
+        settingsCard(
           title: "Kitty Integration",
           subtitle: "Deterministic capture for OpenCode, Codex, and Cloud Code"
         ) {
@@ -439,6 +476,13 @@ private struct OptionsView: View {
     Binding(
       get: { settingsStore.settings.kittyListenAddress },
       set: { settingsStore.updateKittyListenAddress($0) }
+    )
+  }
+
+  private var customPromptTemplateBinding: Binding<String> {
+    Binding(
+      get: { settingsStore.settings.customPromptTemplate },
+      set: { settingsStore.updateCustomPromptTemplate($0) }
     )
   }
 
