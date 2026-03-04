@@ -80,22 +80,43 @@ jobs:
           REPO="${GITHUB_REPOSITORY}"
           TAG="${GITHUB_REF_NAME}"
           BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+          RELEASE_DATE=$(date -u +"%Y-%m-%d")
+
+          # Changes since previous release
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -n "${PREV_TAG}" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --format="- %h %s")
+            COMMITS_HEADER="## Commits since ${PREV_TAG}"
+          else
+            COMMITS=$(git log --format="- %h %s")
+            COMMITS_HEADER="## Commits in this release"
+          fi
 
           GENERATED=$(gh api "repos/${REPO}/releases/generate-notes" \
             --method POST \
             -f tag_name="${TAG}" \
             --jq '.body')
 
-          cat > "$ARTIFACTS_DIR/RELEASE_NOTES.md" <<EOF
-          ${GENERATED}
-
-          ---
-
-          ## Download
-
-          - [${RELEASE_APP_NAME}_installer.dmg](${BASE_URL}/${RELEASE_APP_NAME}_installer.dmg) — macOS disk image
-          - [${RELEASE_APP_NAME}_installer.zip](${BASE_URL}/${RELEASE_APP_NAME}_installer.zip) — ZIP archive
-          EOF
+          {
+            echo "${GENERATED}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Release date"
+            echo ""
+            echo "${RELEASE_DATE}"
+            echo ""
+            echo "${COMMITS_HEADER}"
+            echo ""
+            echo "${COMMITS}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Download"
+            echo ""
+            echo "- [${RELEASE_APP_NAME}_installer.dmg](${BASE_URL}/${RELEASE_APP_NAME}_installer.dmg) — macOS disk image"
+            echo "- [${RELEASE_APP_NAME}_installer.zip](${BASE_URL}/${RELEASE_APP_NAME}_installer.zip) — ZIP archive"
+          } > "$ARTIFACTS_DIR/RELEASE_NOTES.md"
 
       - name: Create GitHub release and upload assets
         uses: softprops/action-gh-release@v2
