@@ -83,6 +83,21 @@ private struct OptionsView: View {
             Toggle("Include clarifying questions", isOn: includeClarifyingQuestionsBinding)
             Toggle("Terminal mode (default)", isOn: terminalModeBinding)
             Toggle("Auto-select all on shortcut", isOn: autoSelectAllBinding)
+            Toggle("Require Kitty Remote Control", isOn: kittyRemoteControlRequiredBinding)
+
+            TextField("Kitty listen address", text: kittyListenAddressBinding)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Button("Run Kitty Check") {
+                    runtime.runKittyRemoteControlCheck()
+                }
+
+                Text(runtime.kittyRemoteControlStatusMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Toggle("Use Groq refinement", isOn: useGroqRefinementBinding)
 
             Picker("Groq model", selection: groqModelBinding) {
@@ -216,6 +231,20 @@ private struct OptionsView: View {
         Binding(
             get: { runtime.settingsStore.settings.autoSelectAllOnTrigger },
             set: { runtime.settingsStore.updateAutoSelectAllOnTrigger($0) }
+        )
+    }
+
+    private var kittyRemoteControlRequiredBinding: Binding<Bool> {
+        Binding(
+            get: { runtime.settingsStore.settings.kittyRemoteControlRequired },
+            set: { runtime.settingsStore.updateKittyRemoteControlRequired($0) }
+        )
+    }
+
+    private var kittyListenAddressBinding: Binding<String> {
+        Binding(
+            get: { runtime.settingsStore.settings.kittyListenAddress },
+            set: { runtime.settingsStore.updateKittyListenAddress($0) }
         )
     }
 }

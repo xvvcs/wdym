@@ -92,12 +92,112 @@ struct AppRuntimeControllerTests {
             frontmostBundleIdentifier: { "net.kovidgoyal.kitty" }
         )
 
+        runtime.settingsStore.updateKittyRemoteControlRequired(false)
         runtime.refactorNow()
         await waitForCompletion(of: runtime)
 
         #expect(commands.lastSelectAllFallbackFlag == true)
         #expect(commands.lastCopyFallbackFlag == true)
         #expect(runtime.status == "Replaced field and copied output")
+    }
+
+    @Test func refactorNowUsesKittyRemoteControlWhenRequiredAndAvailable() async {
+        let focused = StubFocusedTextService(readError: AXFocusedTextError.noFocusedElement)
+        let clipboard = StubClipboardService(initialRead: "stale")
+        let commands = StubTextCommandService(copyAction: { false })
+        let kittyRemoteControl = StubKittyRemoteControlService(
+            connectionStatus: .available("unix:/tmp/prompt-refactor-kitty-123"),
+            selectionResult: .success("explain this function quickly")
+        )
+
+        let runtime = makeRuntime(
+            initialAPIKey: nil,
+            clipboard: clipboard,
+            textCommands: commands,
+            kittyRemoteControl: kittyRemoteControl,
+            focused: focused,
+            permission: SpyAXPermissionService(initialTrusted: true),
+            frontmostBundleIdentifier: { "net.kovidgoyal.kitty" }
+        )
+
+        runtime.refactorNow()
+        await waitForCompletion(of: runtime)
+
+        #expect(kittyRemoteControl.checkConnectionCalls == 1)
+        #expect(kittyRemoteControl.readSelectionCalls == 1)
+        #expect(commands.copyCalls == 0)
+        #expect(commands.selectAllCalls == 0)
+        #expect(commands.pasteCalls == 1)
+        #expect(runtime.status == "Replaced field and copied output")
+    }
+
+    @Test func refactorNowFallsBackToVisibleScreenTextWhenKittySelectionEmpty() async {
+        let focused = StubFocusedTextService(readError: AXFocusedTextError.noFocusedElement)
+        let clipboard = StubClipboardService(initialRead: "stale")
+        let commands = StubTextCommandService(copyAction: { false })
+        let kittyRemoteControl = StubKittyRemoteControlService(
+            connectionStatus: .available("unix:/tmp/prompt-refactor-kitty-123"),
+            selectionResult: .failure(.emptySelection),
+            screenTextResult: .success("opencode visible screen text")
+        )
+
+        let runtime = makeRuntime(
+            initialAPIKey: nil,
+            clipboard: clipboard,
+            textCommands: commands,
+            kittyRemoteControl: kittyRemoteControl,
+            focused: focused,
+            permission: SpyAXPermissionService(initialTrusted: true),
+            frontmostBundleIdentifier: { "net.kovidgoyal.kitty" }
+        )
+
+        runtime.refactorNow()
+        await waitForCompletion(of: runtime)
+
+        #expect(kittyRemoteControl.checkConnectionCalls == 1)
+        #expect(kittyRemoteControl.readSelectionCalls == 1)
+        #expect(kittyRemoteControl.readScreenTextCalls == 1)
+        #expect(commands.copyCalls == 0)
+        #expect(commands.selectAllCalls == 0)
+        #expect(commands.pasteCalls == 1)
+        #expect(runtime.status == "Replaced field and copied output")
+    }
+
+    @Test func refactorNowRequiresKittyRemoteControlWhenUnavailable() async {
+        let commands = StubTextCommandService(copyAction: {
+            Issue.record("Command pipeline should not run when Kitty RC is required")
+            return false
+        })
+        let kittyRemoteControl = StubKittyRemoteControlService(
+            connectionStatus: .unavailable("Kitty remote control unavailable: connect failed")
+        )
+
+        let runtime = makeRuntime(
+            initialAPIKey: nil,
+            textCommands: commands,
+            kittyRemoteControl: kittyRemoteControl,
+            focused: StubFocusedTextService(readText: "ignored"),
+            permission: SpyAXPermissionService(initialTrusted: true),
+            frontmostBundleIdentifier: { "net.kovidgoyal.kitty" }
+        )
+
+        runtime.refactorNow()
+        await waitForCompletion(of: runtime)
+
+        #expect(kittyRemoteControl.checkConnectionCalls == 1)
+        #expect(kittyRemoteControl.readSelectionCalls == 0)
+        #expect(commands.copyCalls == 0)
+        #expect(runtime.status == "Cannot replace: configure Kitty Remote Control")
+    }
+
+    @Test func runKittyRemoteControlCheckUpdatesStatusMessage() async {
+        let kittyRemoteControl = StubKittyRemoteControlService(connectionStatus: .available("unix:/tmp/prompt-refactor-kitty-999"))
+        let runtime = makeRuntime(initialAPIKey: nil, kittyRemoteControl: kittyRemoteControl)
+
+        runtime.runKittyRemoteControlCheck()
+        await waitForKittyStatusUpdate(of: runtime)
+
+        #expect(runtime.kittyRemoteControlStatusMessage == "Kitty remote control is reachable at unix:/tmp/prompt-refactor-kitty-999")
     }
 
     @Test func refactorNowReportsAccessibilityMissingWhenNotTrusted() async {
@@ -205,6 +305,7 @@ struct AppRuntimeControllerTests {
         keychain: InMemoryKeychainStore? = nil,
         clipboard: StubClipboardService = StubClipboardService(initialRead: nil),
         textCommands: StubTextCommandService = StubTextCommandService(),
+        kittyRemoteControl: StubKittyRemoteControlService = StubKittyRemoteControlService(),
         focused: StubFocusedTextService = StubFocusedTextService(readError: AXFocusedTextError.noFocusedElement),
         permission: SpyAXPermissionService = SpyAXPermissionService(initialTrusted: false),
         frontmostBundleIdentifier: @escaping () -> String? = { nil }
@@ -223,6 +324,7 @@ struct AppRuntimeControllerTests {
             hotkeyService: StubHotkeyService(),
             clipboardService: clipboard,
             textCommandService: textCommands,
+            kittyRemoteControlService: kittyRemoteControl,
             focusedTextService: focused,
             permissionService: permission,
             keychainStore: keychainStore,
@@ -239,6 +341,50 @@ struct AppRuntimeControllerTests {
 
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
+    }
+
+    private func waitForKittyStatusUpdate(of runtime: AppRuntimeController) async {
+        for _ in 0..<200 {
+            if runtime.kittyRemoteControlStatusMessage != "Not checked" {
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+    }
+}
+
+private final class StubKittyRemoteControlService: KittyRemoteControlService {
+    var connectionStatus: KittyRemoteControlConnectionStatus
+    var selectionResult: Result<String, KittyRemoteControlError>
+    var screenTextResult: Result<String, KittyRemoteControlError>
+    private(set) var checkConnectionCalls = 0
+    private(set) var readSelectionCalls = 0
+    private(set) var readScreenTextCalls = 0
+
+    init(
+        connectionStatus: KittyRemoteControlConnectionStatus = .unavailable("Kitty remote control unavailable"),
+        selectionResult: Result<String, KittyRemoteControlError> = .failure(.emptySelection),
+        screenTextResult: Result<String, KittyRemoteControlError> = .failure(.emptySelection)
+    ) {
+        self.connectionStatus = connectionStatus
+        self.selectionResult = selectionResult
+        self.screenTextResult = screenTextResult
+    }
+
+    func checkConnection(listenAddress: String) async -> KittyRemoteControlConnectionStatus {
+        checkConnectionCalls += 1
+        return connectionStatus
+    }
+
+    func readFocusedSelection(listenAddress: String) async -> Result<String, KittyRemoteControlError> {
+        readSelectionCalls += 1
+        return selectionResult
+    }
+
+    func readFocusedScreenText(listenAddress: String) async -> Result<String, KittyRemoteControlError> {
+        readScreenTextCalls += 1
+        return screenTextResult
     }
 }
 

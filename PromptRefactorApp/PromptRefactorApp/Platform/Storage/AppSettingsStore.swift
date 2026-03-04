@@ -8,6 +8,8 @@ struct AppSettings: Equatable {
     var includeClarifyingQuestions: Bool
     var terminalModeEnabled: Bool
     var autoSelectAllOnTrigger: Bool
+    var kittyRemoteControlRequired: Bool
+    var kittyListenAddress: String
     var useGroqRefinement: Bool
     var groqModelRawValue: String
     var shortcutPresetRawValue: String
@@ -18,6 +20,8 @@ struct AppSettings: Equatable {
         includeClarifyingQuestions: true,
         terminalModeEnabled: true,
         autoSelectAllOnTrigger: true,
+        kittyRemoteControlRequired: true,
+        kittyListenAddress: "unix:/tmp/prompt-refactor-kitty",
         useGroqRefinement: false,
         groqModelRawValue: GroqModel.llama31_8bInstant.rawValue,
         shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue
@@ -71,6 +75,17 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
         persist()
     }
 
+    func updateKittyRemoteControlRequired(_ value: Bool) {
+        settings.kittyRemoteControlRequired = value
+        persist()
+    }
+
+    func updateKittyListenAddress(_ value: String) {
+        let sanitized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        settings.kittyListenAddress = sanitized.isEmpty ? AppSettings.default.kittyListenAddress : sanitized
+        persist()
+    }
+
     func updateUseGroqRefinement(_ value: Bool) {
         settings.useGroqRefinement = value
         persist()
@@ -92,6 +107,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
         userDefaults.set(settings.includeClarifyingQuestions, forKey: Keys.includeClarifyingQuestions)
         userDefaults.set(settings.terminalModeEnabled, forKey: Keys.terminalModeEnabled)
         userDefaults.set(settings.autoSelectAllOnTrigger, forKey: Keys.autoSelectAllOnTrigger)
+        userDefaults.set(settings.kittyRemoteControlRequired, forKey: Keys.kittyRemoteControlRequired)
+        userDefaults.set(settings.kittyListenAddress, forKey: Keys.kittyListenAddress)
         userDefaults.set(settings.useGroqRefinement, forKey: Keys.useGroqRefinement)
         userDefaults.set(settings.groqModelRawValue, forKey: Keys.groqModel)
         userDefaults.set(settings.shortcutPresetRawValue, forKey: Keys.shortcutPreset)
@@ -113,6 +130,16 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
             ? AppSettings.default.autoSelectAllOnTrigger
             : userDefaults.bool(forKey: Keys.autoSelectAllOnTrigger)
 
+        let kittyRemoteControlRequired = userDefaults.object(forKey: Keys.kittyRemoteControlRequired) == nil
+            ? AppSettings.default.kittyRemoteControlRequired
+            : userDefaults.bool(forKey: Keys.kittyRemoteControlRequired)
+
+        let kittyListenAddress = {
+            let persisted = userDefaults.string(forKey: Keys.kittyListenAddress) ?? ""
+            let sanitized = persisted.trimmingCharacters(in: .whitespacesAndNewlines)
+            return sanitized.isEmpty ? AppSettings.default.kittyListenAddress : sanitized
+        }()
+
         let useGroqRefinement = userDefaults.object(forKey: Keys.useGroqRefinement) == nil
             ? AppSettings.default.useGroqRefinement
             : userDefaults.bool(forKey: Keys.useGroqRefinement)
@@ -127,6 +154,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
             includeClarifyingQuestions: includeClarifyingQuestions,
             terminalModeEnabled: terminalModeEnabled,
             autoSelectAllOnTrigger: autoSelectAllOnTrigger,
+            kittyRemoteControlRequired: kittyRemoteControlRequired,
+            kittyListenAddress: kittyListenAddress,
             useGroqRefinement: useGroqRefinement,
             groqModelRawValue: groqModel,
             shortcutPresetRawValue: shortcutPreset
@@ -140,6 +169,8 @@ private enum Keys {
     static let includeClarifyingQuestions = "includeClarifyingQuestions"
     static let terminalModeEnabled = "terminalModeEnabled"
     static let autoSelectAllOnTrigger = "autoSelectAllOnTrigger"
+    static let kittyRemoteControlRequired = "kittyRemoteControlRequired"
+    static let kittyListenAddress = "kittyListenAddress"
     static let useGroqRefinement = "useGroqRefinement"
     static let groqModel = "groqModel"
     static let shortcutPreset = "shortcutPreset"

@@ -51,6 +51,21 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-030 | `refactorNowSkipsSelectAllWhenAutoSelectSettingDisabled` | Auto-select setting is disabled | Command pipeline copies without issuing Cmd+A | Done |
 | APP-031 | `storeDefaultsEnableTerminalModeAndAutoSelectAll` | Fresh settings initialization | Terminal mode and auto-select defaults are enabled | Done |
 | APP-032 | `refactorNowUsesKittyShortcutFallbackProfile` | Frontmost app is Kitty terminal | Uses terminal shortcut fallback profile for select/copy capture | Done |
+| APP-033 | `refactorNowUsesKittyRemoteControlWhenRequiredAndAvailable` | Kitty RC mode is required and reachable | Reads selected text via Kitty RC and replaces via paste flow | Done |
+| APP-034 | `refactorNowRequiresKittyRemoteControlWhenUnavailable` | Kitty RC mode is required but not reachable | Fails fast with explicit RC setup status and no silent fallback | Done |
+| APP-035 | `runKittyRemoteControlCheckUpdatesStatusMessage` | User triggers manual Kitty diagnostics check | Options diagnostics state includes resolved Kitty socket address from probe result | Done |
+| APP-036 | `checkConnectionResolvesToHighestPidSocketWhenBasePathMissing` | Configured unix socket base path is missing but PID-suffixed sockets exist | Auto-resolves Kitty PID-suffixed socket and connects successfully | Done |
+| APP-037 | `checkConnectionFallsBackToLowerPidSocketWhenNewestCandidateFails` | Highest PID socket is stale but older candidate is reachable | Retries PID candidates in descending order until one responds | Done |
+| APP-038 | `checkConnectionUsesConfiguredAddressWhenSocketPathExists` | Configured socket path exists directly | Preserves explicit socket address without PID scan override | Done |
+| APP-039 | `readFocusedSelectionUsesResolvedPidSocket` | Selection capture runs with base path and only PID socket exists | PID-suffixed socket resolution is shared by text capture command | Done |
+| APP-040 | `checkConnectionAddsKittyLookupPathsToProcessEnvironment` | GUI app environment does not expose a path to `kitten` | Runner PATH is augmented with common Kitty install directories before invoking `kitten @` | Done |
+| APP-041 | `refactorNowFallsBackToVisibleScreenTextWhenKittySelectionEmpty` | Kitty RC selection is empty in focused terminal app | Runtime falls back to focused screen text and continues replace/copy flow | Done |
+| APP-042 | `readFocusedScreenTextUsesScreenExtent` | Kitty RC screen text capture is requested | Service invokes `kitten @ get-text --extent screen --add-cursor --add-wrap-markers` and returns cursor-anchored prompt text | Done |
+| APP-043 | `readFocusedScreenTextExtractsPromptFieldLineWhenVisible` | Focused screen text includes OpenCode transcript and prompt line | Service extracts prompt-field line and excludes transcript/footer hints | Done |
+| APP-044 | `readFocusedScreenTextExtractsPromptFieldContinuationLines` | Prompt-field content spans multiple visible continuation lines | Service stitches continuation lines into one prompt string before returning | Done |
+| APP-045 | `readFocusedScreenTextReturnsEmptySelectionWhenPromptFieldCannotBeDetected` | Screen fallback sees only transcript/output with no prompt markers | Service rejects whole-screen capture and reports empty selection instead | Done |
+| APP-046 | `readFocusedScreenTextSkipsComposerMetadataAndTranscript` | OpenCode composer footer includes mode/model/variant under prompt input | Service ignores metadata/footer/transcript and returns only prompt input line | Done |
+| APP-047 | `readFocusedScreenTextReturnsEmptySelectionWithoutCursorMetadata` | Screen fallback output does not include Kitty cursor trailer | Service rejects non-cursor-anchored capture to avoid transcript/footer false positives | Done |
 
 Source files:
 - `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
@@ -69,6 +84,8 @@ Source files:
 - `PromptRefactorApp/PromptRefactorApp/Platform/Accessibility/AXFocusedTextService.swift`
 - `PromptRefactorApp/PromptRefactorApp/Platform/Clipboard/ClipboardService.swift`
 - `PromptRefactorApp/PromptRefactorApp/Platform/Interaction/TextCommandService.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Interaction/KittyRemoteControlService.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/KittyRemoteControlServiceTests.swift`
 
 ## Planned Next Test Groups
 
@@ -84,4 +101,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (4 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (32 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (47 tests)

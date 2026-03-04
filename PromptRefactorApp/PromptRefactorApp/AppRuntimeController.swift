@@ -6,6 +6,7 @@ import PromptRefactorCore
 final class AppRuntimeController: ObservableObject {
     @Published var status = "Idle"
     @Published private(set) var isAccessibilityTrusted = false
+    @Published var kittyRemoteControlStatusMessage = "Not checked"
     @Published var groqAPIKeyInput = ""
     @Published private(set) var hasStoredGroqAPIKey = false
     @Published var groqAPIKeyMessage = ""
@@ -16,6 +17,7 @@ final class AppRuntimeController: ObservableObject {
     private let hotkeyService: any HotkeyService
     private let clipboardService: any ClipboardService
     private let textCommandService: any TextCommandService
+    private let kittyRemoteControlService: any KittyRemoteControlService
     private let focusedTextService: any AXFocusedTextService
     private let permissionService: any AXPermissionService
     private let keychainStore: any KeychainStore
@@ -30,6 +32,7 @@ final class AppRuntimeController: ObservableObject {
         self.hotkeyService = GlobalHotkeyService()
         self.clipboardService = PasteboardClipboardService()
         self.textCommandService = DefaultTextCommandService()
+        self.kittyRemoteControlService = DefaultKittyRemoteControlService()
         self.focusedTextService = DefaultAXFocusedTextService()
         self.permissionService = DefaultAXPermissionService()
         self.keychainStore = DefaultKeychainStore()
@@ -48,6 +51,7 @@ final class AppRuntimeController: ObservableObject {
         hotkeyService: any HotkeyService,
         clipboardService: any ClipboardService,
         textCommandService: any TextCommandService,
+        kittyRemoteControlService: any KittyRemoteControlService,
         focusedTextService: any AXFocusedTextService,
         permissionService: any AXPermissionService,
         keychainStore: any KeychainStore,
@@ -59,6 +63,7 @@ final class AppRuntimeController: ObservableObject {
         self.hotkeyService = hotkeyService
         self.clipboardService = clipboardService
         self.textCommandService = textCommandService
+        self.kittyRemoteControlService = kittyRemoteControlService
         self.focusedTextService = focusedTextService
         self.permissionService = permissionService
         self.keychainStore = keychainStore
@@ -105,6 +110,12 @@ final class AppRuntimeController: ObservableObject {
         permissionService.openAccessibilitySettings()
     }
 
+    func runKittyRemoteControlCheck() {
+        Task { [weak self] in
+            await self?.refreshKittyRemoteControlStatus()
+        }
+    }
+
     func saveGroqAPIKey() {
         let sanitized = groqAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitized.isEmpty else {
@@ -144,6 +155,10 @@ final class AppRuntimeController: ObservableObject {
                 status = "Cannot replace: enable Accessibility and select text"
             case .focusedReadFailed:
                 status = "Cannot read selected text in this app"
+            case .kittyRemoteControlUnavailable:
+                status = "Cannot replace: configure Kitty Remote Control"
+            case .kittySelectionMissing:
+                status = "Cannot replace: select text in Kitty/OpenCode"
             case .none:
                 status = "Cannot replace from clipboard source"
             }
@@ -259,6 +274,10 @@ final class AppRuntimeController: ObservableObject {
                     status = "\(completionStatus) (accessibility not enabled; copied)"
                 case .focusedReadFailed:
                     status = "\(completionStatus) (focused field unavailable; copied)"
+                case .kittyRemoteControlUnavailable:
+                    status = "\(completionStatus) (Kitty remote control unavailable; copied)"
+                case .kittySelectionMissing:
+                    status = "\(completionStatus) (Kitty selection missing; copied)"
                 case .none:
                     status = "\(completionStatus) (copied)"
                 }
@@ -278,6 +297,26 @@ final class AppRuntimeController: ObservableObject {
         let previousClipboard = clipboardService.readString()
         let outputMode = settings.refactorPreferences.outputMode
         let useTerminalShortcutFallbacks = shouldUseTerminalShortcutFallbacks(settings: settings)
+
+        if shouldRequireKittyRemoteControl(settings: settings) {
+            let kittyCapture = await captureUsingKittyRemoteControl(settings: settings)
+            switch kittyCapture {
+            case .success(let selectedText):
+                return InputSource(
+                    kind: .selectionCopy,
+                    text: selectedText,
+                    fallbackReason: .none,
+                    previousClipboardText: previousClipboard
+                )
+            case .failure(let fallbackReason):
+                return InputSource(
+                    kind: .clipboard,
+                    text: nil,
+                    fallbackReason: fallbackReason,
+                    previousClipboardText: previousClipboard
+                )
+            }
+        }
 
         if outputMode.shouldReplaceText || settings.terminalModeEnabled {
             if let selectedText = await captureUsingCommandPipeline(
@@ -389,6 +428,46 @@ final class AppRuntimeController: ObservableObject {
         return bundleIdentifier == "net.kovidgoyal.kitty"
     }
 
+    private func shouldRequireKittyRemoteControl(settings: AppSettings) -> Bool {
+        shouldUseTerminalShortcutFallbacks(settings: settings) && settings.kittyRemoteControlRequired
+    }
+
+    private func captureUsingKittyRemoteControl(settings: AppSettings) async -> Result<String, InputFallbackReason> {
+        let listenAddress = settings.kittyListenAddress
+        let connectionStatus = await kittyRemoteControlService.checkConnection(listenAddress: listenAddress)
+        kittyRemoteControlStatusMessage = connectionStatus.message
+
+        guard connectionStatus.isAvailable else {
+            return .failure(.kittyRemoteControlUnavailable)
+        }
+
+        let selectionResult = await kittyRemoteControlService.readFocusedSelection(listenAddress: listenAddress)
+        switch selectionResult {
+        case .success(let text):
+            return .success(text)
+        case .failure(.emptySelection):
+            let screenTextResult = await kittyRemoteControlService.readFocusedScreenText(listenAddress: listenAddress)
+            switch screenTextResult {
+            case .success(let text):
+                return .success(text)
+            case .failure(.emptySelection):
+                return .failure(.kittySelectionMissing)
+            case .failure(.unavailable(let reason)):
+                kittyRemoteControlStatusMessage = reason
+                return .failure(.kittyRemoteControlUnavailable)
+            }
+        case .failure(.unavailable(let reason)):
+            kittyRemoteControlStatusMessage = reason
+            return .failure(.kittyRemoteControlUnavailable)
+        }
+    }
+
+    private func refreshKittyRemoteControlStatus() async {
+        let listenAddress = settingsStore.settings.kittyListenAddress
+        let connectionStatus = await kittyRemoteControlService.checkConnection(listenAddress: listenAddress)
+        kittyRemoteControlStatusMessage = connectionStatus.message
+    }
+
     private func refreshAccessibilityState() {
         isAccessibilityTrusted = permissionService.isTrusted()
     }
@@ -450,8 +529,10 @@ private enum InputSourceKind {
     case clipboard
 }
 
-private enum InputFallbackReason {
+private enum InputFallbackReason: Error {
     case none
     case accessibilityNotTrusted
     case focusedReadFailed
+    case kittyRemoteControlUnavailable
+    case kittySelectionMissing
 }

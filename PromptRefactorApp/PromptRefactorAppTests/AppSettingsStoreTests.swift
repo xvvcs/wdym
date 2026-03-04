@@ -23,6 +23,8 @@ struct AppSettingsStoreTests {
         store.updateIncludeClarifyingQuestions(false)
         store.updateTerminalModeEnabled(false)
         store.updateAutoSelectAllOnTrigger(false)
+        store.updateKittyRemoteControlRequired(false)
+        store.updateKittyListenAddress("unix:/tmp/custom-kitty")
         store.updateUseGroqRefinement(true)
         store.updateGroqModelRawValue(GroqModel.llama33_70bVersatile.rawValue)
         store.updateShortcutPresetRawValue(ShortcutPreset.commandOptionR.rawValue)
@@ -34,6 +36,8 @@ struct AppSettingsStoreTests {
         #expect(!reloaded.settings.includeClarifyingQuestions)
         #expect(!reloaded.settings.terminalModeEnabled)
         #expect(!reloaded.settings.autoSelectAllOnTrigger)
+        #expect(!reloaded.settings.kittyRemoteControlRequired)
+        #expect(reloaded.settings.kittyListenAddress == "unix:/tmp/custom-kitty")
         #expect(reloaded.settings.useGroqRefinement)
         #expect(reloaded.settings.groqModelRawValue == GroqModel.llama33_70bVersatile.rawValue)
         #expect(reloaded.settings.shortcutPresetRawValue == ShortcutPreset.commandOptionR.rawValue)
@@ -57,6 +61,8 @@ struct AppSettingsStoreTests {
 
         #expect(store.settings.terminalModeEnabled)
         #expect(store.settings.autoSelectAllOnTrigger)
+        #expect(store.settings.kittyRemoteControlRequired)
+        #expect(store.settings.kittyListenAddress == "unix:/tmp/prompt-refactor-kitty")
     }
 
     private func testUserDefaults() -> TestDefaultsFixture {
