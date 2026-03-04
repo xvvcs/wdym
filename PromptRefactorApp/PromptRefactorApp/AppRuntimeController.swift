@@ -83,10 +83,6 @@ final class AppRuntimeController: ObservableObject {
         }
     }
 
-    func refactorClipboard() {
-        refactorNow()
-    }
-
     func requestAccessibilityAccess() {
         if permissionService.isTrusted() {
             refreshAccessibilityState()
