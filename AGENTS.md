@@ -143,6 +143,7 @@ These rules are based on existing repository conventions.
 ### Testing Conventions
 
 - Use Swift Testing (`@Test`, `#expect`) rather than XCTest style in this package.
+- Make sure to update the `TEST_SCENARIOS.md` file after adding new tests or scenarios.
 - Keep tests deterministic; avoid network/time/random dependencies.
 - Follow Arrange-Act-Assert structure with spacing between phases.
 - Validate both happy paths and edge/empty input behavior.

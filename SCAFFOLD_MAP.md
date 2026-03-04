@@ -154,6 +154,13 @@ Planned structure (including existing files):
 
 ## 4) Milestones (with Exit Criteria)
 
+### Milestone Status
+
+- M0: Complete
+- M1: Complete
+- M2: Complete
+- M3: Next
+
 ### M0 - Foundation (Project setup)
 
 Scope:

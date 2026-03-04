@@ -4,6 +4,8 @@ Compact tracker for implemented and planned tests.
 
 ## Current Automated Tests
 
+### Core Package (`PromptRefactorCore`)
+
 | ID | Test | Scenario | Coverage | Status |
 |---|---|---|---|---|
 | PRS-001 | `normalizeDictationRemovesFillerWordsAndCleansSpacing` | Input contains filler words and irregular spacing | Filler removal, whitespace cleanup, punctuation append | Done |
@@ -12,6 +14,32 @@ Compact tracker for implemented and planned tests.
 | PRS-004 | `buildPromptIncludesCodingSpecificInstructions` | Style preset is `.coding` | Style-specific instructions + normalized task inclusion | Done |
 
 Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
+
+### App Target (`PromptRefactorAppTests`)
+
+| ID | Test | Scenario | Coverage | Status |
+|---|---|---|---|---|
+| APP-001 | `outputModeTitlesMatchExpectedLabels` | Output mode labels are shown in options UI | Stable labels for all output modes | Done |
+| APP-002 | `outputModeBehaviorFlagsAreCorrect` | Output mode is mapped to action behavior flags | `shouldReplaceText` and `shouldCopyText` logic | Done |
+| APP-003 | `outputModeFallsBackToReplaceAndCopyForInvalidRawValue` | Stored output mode value is invalid | Safe default fallback behavior | Done |
+| APP-004 | `appRefactorPreferencesBuildsRefactorOptionsFromStoredValues` | Stored style and clarifying settings are loaded | Refactor option mapping from persisted settings | Done |
+| APP-005 | `appRefactorPreferencesFallsBackToGeneralPromptStyleWhenInvalid` | Stored style value is invalid | Safe style fallback to `.general` | Done |
+| APP-006 | `promptStyleDisplayTitlesMatchOptionsLabels` | Prompt styles are displayed in options picker | Stable style labels in options UI | Done |
+| APP-007 | `shortcutPresetFallsBackToDefaultWhenRawValueInvalid` | Stored shortcut preset value is invalid | Safe shortcut fallback to default (`Cmd+Shift+R`) | Done |
+| APP-008 | `shortcutPresetProvidesExpectedKeyBindings` | Shortcut preset is selected | Correct key code and modifier mapping for each preset | Done |
+| APP-009 | `hotkeyBindingMatchesEquivalentKeyboardEvent` | Keyboard event matches configured shortcut | Hotkey trigger matching logic | Done |
+| APP-010 | `hotkeyBindingRejectsDifferentModifiers` | Keyboard event has same key but different modifiers | Prevent false-positive hotkey triggers | Done |
+| APP-011 | `storeLoadsExpectedDefaultValues` | Fresh install / no saved settings | App settings default values | Done |
+| APP-012 | `storePersistsUpdatedValuesAcrossInstances` | User changes settings and app reloads | UserDefaults-backed persistence behavior | Done |
+| APP-013 | `settingsShortcutPresetFallsBackWhenPersistedValueIsInvalid` | Corrupted/invalid persisted shortcut value | Store-level fallback safety for shortcut preset | Done |
+
+Source files:
+- `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
+- `PromptRefactorApp/PromptRefactorApp/AppOptions.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/HotkeyServiceTests.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/AppSettingsStoreTests.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Hotkey/HotkeyModels.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Storage/AppSettingsStore.swift`
 
 ## Planned Next Test Groups
 
@@ -24,5 +52,7 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 
 ## Last Updated
 
-- Date: 2026-03-03
-- Command baseline: `swift test` passing (4 tests)
+- Date: 2026-03-04
+- Command baseline:
+  - `swift test` passing (4 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (13 tests)
