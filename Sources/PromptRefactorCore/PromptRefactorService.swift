@@ -35,13 +35,13 @@ public struct PromptRefactorService: Sendable {
             return ""
         }
 
-        text = stripSurroundingParentheses(from: text)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         text = stripFillerPhrases(from: text)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         text = text.replacingOccurrences(of: "\\s+([,.;:!?])", with: "$1", options: .regularExpression)
         text = text.replacingOccurrences(of: "([,.;:!?]){2,}", with: "$1", options: .regularExpression)
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        text = stripSurroundingParentheses(from: text)
 
         text = capitalizeFirstLetter(in: text)
 

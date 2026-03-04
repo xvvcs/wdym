@@ -48,6 +48,24 @@ import Testing
     #expect(normalized == "(Hello) world).")
 }
 
+@Test func normalizeDictationRemovesSurroundingParenthesesWithFillerBefore() {
+    let service = PromptRefactorService()
+    let raw = "uh (make a function to sort an array)"
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "Make a function to sort an array.")
+}
+
+@Test func normalizeDictationRemovesSurroundingParenthesesWithFillerAfter() {
+    let service = PromptRefactorService()
+    let raw = "(hello world) um"
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "Hello world.")
+}
+
 @Test func buildPromptReturnsEmptyStringForEmptyInput() {
     let service = PromptRefactorService()
     let result = service.buildPrompt(from: "   ")
