@@ -13,10 +13,15 @@ import SwiftUI
 @main
 struct PromptRefactorAppApp: App {
   @StateObject private var runtime = AppRuntimeController()
+  @AppStorage("setupCompleted") private var setupCompleted = false
 
   var body: some Scene {
-    MenuBarExtra("Prompt Refactor", systemImage: "wand.and.stars") {
-      MenuBarContent(status: $runtime.status, refactorNow: runtime.refactorNow)
+    MenuBarExtra("wdym", systemImage: "wand.and.stars") {
+      MenuBarContent(
+        status: $runtime.status,
+        refactorNow: runtime.refactorNow,
+        setupCompleted: $setupCompleted
+      )
     }
     .menuBarExtraStyle(.window)
 
@@ -24,12 +29,22 @@ struct PromptRefactorAppApp: App {
       OptionsView(runtime: runtime, settingsStore: runtime.settingsStore)
         .frame(minWidth: 520, minHeight: 460)
     }
+
+    WindowGroup("Setup", id: "setup") {
+      SetupFlowView(runtime: runtime) {
+        setupCompleted = true
+      }
+      .fixedSize()
+    }
+    .windowResizability(.contentSize)
+    .defaultPosition(.center)
   }
 }
 
 private struct MenuBarContent: View {
   @Binding var status: String
   let refactorNow: () -> Void
+  @Binding var setupCompleted: Bool
 
   @Environment(\.openWindow) private var openWindow
 
@@ -79,16 +94,31 @@ private struct MenuBarContent: View {
       Divider()
         .overlay(Color.white.opacity(0.18))
 
-      Button("Quit") {
-        NSApplication.shared.terminate(nil)
+      HStack {
+        Button("Rerun Setup") {
+          openWindow(id: "setup")
+        }
+        .buttonStyle(.plain)
+        .font(.subheadline)
+        .foregroundStyle(Color.white.opacity(0.5))
+
+        Spacer()
+
+        Button("Quit") {
+          NSApplication.shared.terminate(nil)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.white.opacity(0.7))
       }
-      .buttonStyle(.plain)
-      .foregroundStyle(Color.white.opacity(0.7))
-      .frame(maxWidth: .infinity, alignment: .trailing)
     }
     .padding(14)
     .frame(width: 340, alignment: .leading)
     .preferredColorScheme(.dark)
+    .task {
+      if !setupCompleted {
+        openWindow(id: "setup")
+      }
+    }
     .background(
       RoundedRectangle(cornerRadius: 14)
         .fill(
