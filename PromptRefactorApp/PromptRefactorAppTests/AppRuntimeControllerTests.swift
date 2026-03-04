@@ -279,7 +279,38 @@ struct AppRuntimeControllerTests {
         #expect(clipboard.currentValue == secret)
     }
 
-    @Test func requestAccessibilityAccessOpensSettingsWhenNotTrusted() {
+    @Test func refactorNowSkipsInputContainingEmbeddedSecret() async {
+        let textWithSecret = "Here is my key: gsk_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456 please use it"
+        let clipboard = StubClipboardService(initialRead: textWithSecret)
+        let runtime = makeRuntime(
+            initialAPIKey: nil,
+            clipboard: clipboard,
+            textCommands: StubTextCommandService(copyAction: { false }),
+            focused: StubFocusedTextService(readError: AXFocusedTextError.noFocusedElement),
+            permission: SpyAXPermissionService(initialTrusted: false)
+        )
+
+        runtime.settingsStore.updateOutputModeRawValue(OutputMode.copyOnly.rawValue)
+
+        runtime.refactorNow()
+        await waitForCompletion(of: runtime)
+
+        #expect(runtime.status == "Skipped: text looks like a secret")
+        #expect(clipboard.currentValue == textWithSecret)
+    }
+
+    @Test func saveGroqApiKeyReturnsTrueOnSuccessAndFalseOnFailure() {
+        let keychain = FailingKeychainStore()
+        let runtime = makeRuntime(initialAPIKey: nil, keychain: keychain)
+
+        runtime.groqAPIKeyInput = "gsk_somekey"
+        let result = runtime.saveGroqAPIKey()
+
+        #expect(!result)
+        #expect(runtime.groqAPIKeyMessage == "Failed to save API key")
+    }
+
+
         let permission = SpyAXPermissionService(initialTrusted: false)
         let runtime = makeRuntime(initialAPIKey: nil, permission: permission)
 
@@ -541,5 +572,17 @@ private final class InMemoryKeychainStore: KeychainStore {
 
     func deleteGroqAPIKey() throws {
         apiKey = nil
+    }
+}
+
+private final class FailingKeychainStore: KeychainStore {
+    func loadGroqAPIKey() -> String? { nil }
+
+    func saveGroqAPIKey(_ apiKey: String) throws {
+        throw KeychainStoreError.unexpectedStatus(-25299)
+    }
+
+    func deleteGroqAPIKey() throws {
+        throw KeychainStoreError.unexpectedStatus(-25299)
     }
 }

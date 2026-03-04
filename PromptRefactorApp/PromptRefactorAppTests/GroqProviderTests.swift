@@ -76,7 +76,32 @@ struct GroqProviderTests {
         }
     }
 
-    private func makeSession(statusCode: Int, json: String) -> URLSession {
+    @Test func groqProviderThrowsForRateLimitStatusCode() async {
+        let session = makeSession(
+            statusCode: 429,
+            json: """
+            {
+              "error": {
+                "message": "Rate limit exceeded"
+              }
+            }
+            """
+        )
+
+        let provider = GroqProvider(
+            apiKey: "test-key",
+            model: .llama31_8bInstant,
+            session: session
+        )
+
+        await #expect(throws: GroqProviderError.badStatusCode(429)) {
+            try await provider.refactor(
+                LLMRefactorRequest(prompt: "raw text", style: .general, language: "English")
+            )
+        }
+    }
+
+
         URLProtocolStub.statusCode = statusCode
         URLProtocolStub.data = Data(json.utf8)
 

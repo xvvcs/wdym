@@ -1,0 +1,251 @@
+name: Create Code Review Issues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create essential issue 1 – Secret detection misses embedded keys
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Essential] Secret detection regex misses API keys embedded inside larger text",
+              labels: ["bug", "security"],
+              body: `## Summary
+
+The \`looksLikeSecret\` function in \`AppRuntimeController.swift\` (lines 523–535) used to use regex patterns anchored with \`^\` and \`$\`, which meant they only matched when the **entire trimmed string** was a secret key.  A key embedded inside other text (e.g. \`"My API key is gsk_abc123..."\`) would **not** be detected, and would be forwarded to the Groq API.
+
+> ✅ **This has been fixed in the codebase** — the anchors were removed so keys are detected anywhere in the text.  This issue is kept for historical tracking.
+
+## Location
+
+\`PromptRefactorApp/PromptRefactorApp/AppRuntimeController.swift\`, function \`looksLikeSecret\`
+
+## Impact
+
+If a user accidentally selects text that contains an API key alongside other content, the key could be leaked to the Groq API.
+
+## Resolution
+
+Removed \`^\` / \`$\` anchors from all three patterns so that embedded keys are detected regardless of surrounding text.
+
+## Priority
+
+🔴 **Essential** — Security vulnerability; accidental secret exposure.`
+            });
+
+      - name: Create essential issue 2 – Setup "Save & Continue" proceeds on key-save failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Essential] Setup step 3: \"Save & Continue\" advances to the next step even when the Groq API key fails to save",
+              labels: ["bug", "ux"],
+              body: `## Summary
+
+In \`SetupFlowView.swift\` the **Groq** step's "Save & Continue" button called \`runtime.saveGroqAPIKey()\` and then \`onNext()\` unconditionally, even when the keychain write failed.  The failure message was briefly set but the view navigated forward immediately, making the error invisible to the user.
+
+> ✅ **This has been fixed** — \`saveGroqAPIKey()\` now returns a \`Bool\` and \`onNext()\` is only called on success.
+
+## Location
+
+\`PromptRefactorApp/PromptRefactorApp/Features/Setup/SetupFlowView.swift\`, \`GroqStepView\` body
+
+## Impact
+
+Users who encounter a keychain write error silently proceed without an API key configured, not knowing their key was never saved.
+
+## Priority
+
+🔴 **Essential** — Silent failure during onboarding; users may believe the app is properly configured when it is not.`
+            });
+
+      - name: Create essential issue 3 – Groq API key stored in plain @Published String
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Essential] Groq API key loaded from Keychain into a plain @Published String property",
+              labels: ["security", "enhancement"],
+              body: `## Summary
+
+\`AppRuntimeController.refreshGroqAPIKeyState()\` loads the full API key from the Keychain and stores it in \`groqAPIKeyInput\`, a \`@Published var String\`.  Any Combine subscriber (or SwiftUI view binding) can read the raw key value from memory.  While the field is rendered as a \`SecureField\`, the backing storage is a plain string that is visible to all observers.
+
+## Location
+
+\`PromptRefactorApp/PromptRefactorApp/AppRuntimeController.swift\`, function \`refreshGroqAPIKeyState\` (lines 513–521)
+
+## Recommendation
+
+- Store only a **masked representation** (e.g. \`"gsk_••••••••"\`) in the published property used for display.
+- Keep the raw key exclusively in the Keychain and only retrieve it at the point of use (inside \`ProviderFactory.makeProvider\`).
+- Alternatively, use a dedicated \`@ObfuscatedString\` wrapper that prevents accidental logging or observation.
+
+## Priority
+
+🔴 **Essential** — Security concern; sensitive credential unnecessarily held in observable memory.`
+            });
+
+      - name: Create essential issue 4 – No 429 rate-limit handling for Groq
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Essential] Groq API 429 rate-limit errors are swallowed into a generic \"Groq failed\" message",
+              labels: ["bug", "ux"],
+              body: `## Summary
+
+The refactor pipeline in \`AppRuntimeController.performRefactorNow\` caught \`GroqProviderError.badStatusCode(401)\` with a specific message, but all other status errors — including **429 Too Many Requests** — fell through to the generic \`"Groq failed, used local fallback"\` catch.  Users hitting the free-tier rate limit received an unhelpful message with no guidance.
+
+> ✅ **This has been fixed** — a dedicated \`catch GroqProviderError.badStatusCode(429)\` branch is now present with the message \`"Groq rate limit reached, used local fallback"\`.
+
+## Location
+
+\`PromptRefactorApp/PromptRefactorApp/AppRuntimeController.swift\`, \`performRefactorNow\`, Groq catch block
+
+## Priority
+
+🔴 **Essential** — Poor UX for users on the free Groq tier; they receive no actionable feedback.`
+            });
+
+      - name: Create optional issue 5 – Clipboard capture uses hardcoded polling sleeps
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Optional] Clipboard capture relies on hardcoded sleep-based polling, causing up to 500 ms latency",
+              labels: ["performance", "enhancement"],
+              body: `## Summary
+
+\`captureUsingCommandPipeline\` in \`AppRuntimeController.swift\` (lines 407–417) polls the clipboard up to **10 times with a 50 ms sleep** per iteration (500 ms worst case), waiting for the marker string to be replaced by the user's selection.
+
+Additionally, \`DefaultTextCommandService\` uses multiple **80 ms hardcoded sleeps** around keyboard event posting.
+
+This sleep-based approach is fragile on slow machines or under system load, and can make the app feel sluggish.
+
+## Recommendation
+
+- Replace the fixed-delay loop with a **Combine / AsyncStream publisher** that fires whenever \`NSPasteboard.changeCount\` increments.
+- For \`TextCommandService\`, use a KVO or notification observer on the pasteboard instead of a fixed sleep.
+
+## Priority
+
+🟡 **Optional** — Performance improvement; current behaviour is functional but introduces unnecessary latency.`
+            });
+
+      - name: Create optional issue 6 – No format validation for Kitty listen address
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Optional] Kitty listen address field accepts any string with no format validation",
+              labels: ["enhancement", "ux"],
+              body: `## Summary
+
+The Kitty listen address field in \`OptionsView\` (and \`AppSettingsStore.updateKittyListenAddress\`) only trims whitespace and falls back to the default when empty.  No validation is performed to ensure the value is a valid Unix socket path (\`unix:/path/to/socket\`) or TCP address (\`tcp:host:port\`).
+
+An invalid address causes a confusing runtime error when "Run Kitty Check" is pressed rather than an immediate inline validation message.
+
+## Recommendation
+
+- Add a simple validator that checks the prefix (\`unix:\` or \`tcp:\`) and rejects malformed values inline in the UI.
+- Show an inline error beneath the text field rather than waiting for the connection check.
+
+## Priority
+
+🟡 **Optional** — UX improvement; saves time debugging misconfiguration.`
+            });
+
+      - name: Create optional issue 7 – Status message has no minimum display duration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Optional] Status message can be overwritten instantly, making transient errors invisible",
+              labels: ["ux", "enhancement"],
+              body: `## Summary
+
+The \`status\` property in \`AppRuntimeController\` is updated synchronously throughout the refactor pipeline.  If one operation immediately follows another, a previous status (including error messages) can be overwritten before the user has a chance to read it.
+
+For example, a Groq auth failure message is set, but if the user triggers another refactor immediately, it disappears.  The status field in the menu bar popup is limited to 3 lines and has no timeout mechanism.
+
+## Recommendation
+
+- Introduce a minimum display duration for error/warning status messages (e.g. 2–3 seconds) before allowing them to be overwritten.
+- Consider using a dedicated notification or alert for critical errors (auth failure, rate limit).
+
+## Priority
+
+🟡 **Optional** — UX improvement; transient errors can currently be missed entirely.`
+            });
+
+      - name: Create optional issue 8 – Menu bar popup title inconsistency
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Optional] Menu bar popup title \"Prompt Refactor\" is inconsistent with the app name \"wdym\"",
+              labels: ["ux", "enhancement"],
+              body: `## Summary
+
+The menu bar popup (\`MenuBarContent\` in \`PromptRefactorAppApp.swift\`) displays the heading **"Prompt Refactor"** and subtitle **"Menu Bar Controls"**, while the product name throughout all other surfaces (README, setup flow, hotkey trigger description) is **"wdym"**.
+
+This creates a confusing brand inconsistency for users.
+
+## Location
+
+\`PromptRefactorApp/PromptRefactorApp/PromptRefactorAppApp.swift\`, \`MenuBarContent.body\` — the \`Text("Prompt Refactor")\` heading.
+
+## Recommendation
+
+Replace the heading with **"wdym"** to match the product name used everywhere else.
+
+## Priority
+
+🟢 **Optional** — Minor polish; no functional impact.`
+            });
+
+      - name: Create optional issue 9 – Groq API timeout of 20s may block UX
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "[Optional] Groq API timeout of 20 seconds is too long and may block the UX",
+              labels: ["performance", "ux", "enhancement"],
+              body: `## Summary
+
+\`GroqProvider.swift\` (line 39) sets \`urlRequest.timeoutInterval = 20\`.  During this 20-second window the app displays \`"Refactoring…"\` with no indication of progress, and the user cannot trigger another refactor (the active task is cancelled, but the previous network call may still be in-flight).
+
+## Recommendation
+
+- Reduce the timeout to **10 seconds** or less.
+- Add a cancel mechanism so users can abort a stalled request (e.g. pressing the hotkey again cancels the in-flight request and resets status immediately).
+- Consider showing elapsed time or a progress indicator while waiting for the LLM response.
+
+## Priority
+
+🟡 **Optional** — UX improvement; current behaviour can make the app appear frozen.`
+            });

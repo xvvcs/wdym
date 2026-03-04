@@ -118,11 +118,12 @@ final class AppRuntimeController: ObservableObject {
     }
   }
 
-  func saveGroqAPIKey() {
+  @discardableResult
+  func saveGroqAPIKey() -> Bool {
     let sanitized = groqAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !sanitized.isEmpty else {
       groqAPIKeyMessage = "Enter a non-empty API key"
-      return
+      return false
     }
 
     do {
@@ -130,8 +131,10 @@ final class AppRuntimeController: ObservableObject {
       groqAPIKeyInput = sanitized
       groqAPIKeyMessage = "Groq API key saved"
       refreshGroqAPIKeyState()
+      return true
     } catch {
       groqAPIKeyMessage = "Failed to save API key"
+      return false
     }
   }
 
@@ -216,6 +219,8 @@ final class AppRuntimeController: ObservableObject {
           completionStatus = "Copied refactored prompt via Groq"
         } catch GroqProviderError.badStatusCode(401) {
           completionStatus = "Groq auth failed, used local fallback"
+        } catch GroqProviderError.badStatusCode(429) {
+          completionStatus = "Groq rate limit reached, used local fallback"
         } catch {
           completionStatus = "Groq failed, used local fallback"
         }
@@ -524,9 +529,9 @@ final class AppRuntimeController: ObservableObject {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
     let patterns = [
-      "(?i)^gsk_[A-Za-z0-9_-]{16,}$",
-      "(?i)^sk-[A-Za-z0-9_-]{16,}$",
-      "(?i)^ghp_[A-Za-z0-9]{20,}$",
+      "(?i)gsk_[A-Za-z0-9_-]{16,}",
+      "(?i)sk-[A-Za-z0-9_-]{16,}",
+      "(?i)ghp_[A-Za-z0-9]{20,}",
     ]
 
     return patterns.contains { pattern in
