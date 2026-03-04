@@ -6,6 +6,7 @@ struct SetupFlowView: View {
   @ObservedObject var runtime: AppRuntimeController
   let onComplete: () -> Void
 
+  @Environment(\.dismiss) private var dismiss
   @State private var step: SetupStep = .accessibility
 
   var body: some View {
@@ -37,7 +38,10 @@ struct SetupFlowView: View {
               step = .ready
             }
           case .ready:
-            ReadyStepView(runtime: runtime, onComplete: onComplete)
+            ReadyStepView(runtime: runtime) {
+              onComplete()
+              dismiss()
+            }
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -90,7 +94,7 @@ private struct AccessibilityStepView: View {
       )
 
       Button("Open System Settings") {
-        runtime.requestAccessibilityAccess()
+        runtime.openAccessibilitySettings()
       }
       .buttonStyle(FilledSetupButtonStyle())
 
