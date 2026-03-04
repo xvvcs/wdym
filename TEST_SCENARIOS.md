@@ -16,6 +16,9 @@ Compact tracker for implemented and planned tests.
 | PRS-007 | `normalizeDictationLeavesUnbalancedParenthesesIntact` | Input has unbalanced surrounding parentheses | Balanced-pair validation guard in parentheses stripping | Done |
 | PRS-008 | `normalizeDictationRemovesSurroundingParenthesesWithFillerBefore` | Filler word precedes the opening parenthesis | Parentheses stripped after filler removal clears the leading filler | Done |
 | PRS-009 | `normalizeDictationRemovesSurroundingParenthesesWithFillerAfter` | Filler word follows the closing parenthesis | Parentheses stripped after filler removal clears the trailing filler | Done |
+| PRS-010 | `normalizeDictationRemovesSurroundingDoubleQuotes` | Input is wrapped in a single pair of double quotes | Double-quote stripping, capitalization, punctuation append | Done |
+| PRS-011 | `normalizeDictationPreservesInternalPunctuationWhenStrippingDoubleQuotes` | Input wrapped in double quotes contains internal commas and question marks | Internal `.`, `,`, `?` preserved in original positions after quote strip | Done |
+| PRS-012 | `normalizeDictationLeavesEmbeddedDoubleQuotesIntact` | Input starts and ends with `"` but also has inner double quotes | Guard prevents stripping when inner quotes exist, preserving text as-is | Done |
 
 Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 
@@ -110,5 +113,5 @@ Source files:
 
 - Date: 2026-03-04
 - Command baseline:
-  - `swift test` passing (9 tests)
+  - `swift test` passing (12 tests)
   - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (53 tests)

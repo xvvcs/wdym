@@ -42,6 +42,7 @@ public struct PromptRefactorService: Sendable {
         text = text.replacingOccurrences(of: "([,.;:!?]){2,}", with: "$1", options: .regularExpression)
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         text = stripSurroundingParentheses(from: text)
+        text = stripSurroundingDoubleQuotes(from: text)
 
         text = capitalizeFirstLetter(in: text)
 
@@ -91,6 +92,15 @@ public struct PromptRefactorService: Sendable {
             result = String(result.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
         }
         return result
+    }
+
+    private func stripSurroundingDoubleQuotes(from text: String) -> String {
+        guard text.hasPrefix("\"") && text.hasSuffix("\"") && text.count >= 2 else {
+            return text
+        }
+        let inner = String(text.dropFirst().dropLast())
+        guard !inner.contains("\"") else { return text }
+        return inner.trimmingCharacters(in: .whitespaces)
     }
 
     private func stripFillerPhrases(from text: String) -> String {

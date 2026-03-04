@@ -66,6 +66,33 @@ import Testing
     #expect(normalized == "Hello world.")
 }
 
+@Test func normalizeDictationRemovesSurroundingDoubleQuotes() {
+    let service = PromptRefactorService()
+    let raw = "\"write a function to sort an array\""
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "Write a function to sort an array.")
+}
+
+@Test func normalizeDictationPreservesInternalPunctuationWhenStrippingDoubleQuotes() {
+    let service = PromptRefactorService()
+    let raw = "\"hello, world?\""
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "Hello, world?")
+}
+
+@Test func normalizeDictationLeavesEmbeddedDoubleQuotesIntact() {
+    let service = PromptRefactorService()
+    let raw = "\"hello\" and \"world\""
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "\"Hello\" and \"world\".")
+}
+
 @Test func buildPromptReturnsEmptyStringForEmptyInput() {
     let service = PromptRefactorService()
     let result = service.buildPrompt(from: "   ")
