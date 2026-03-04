@@ -3,7 +3,7 @@
 
 <h1>wdym</h1>
 
-<p><strong>What do you mean?</strong> — Turn rough dictation and messy text into sharp, AI-ready prompts in seconds.</p>
+<p><strong>What do you mean?</strong> — Turn rough dictation and messy text into sharp, AI-ready prompts in an instant</p>
 
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple&logoColor=white)](https://github.com/xvvcs/wdym/releases)
 [![Swift](https://img.shields.io/badge/Swift-6.0-f05138?logo=swift&logoColor=white)](https://swift.org)
