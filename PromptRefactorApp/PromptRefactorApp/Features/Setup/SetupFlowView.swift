@@ -129,30 +129,56 @@ private struct ShortcutStepView: View {
   @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
   let onNext: () -> Void
 
+  @StateObject private var shortcutRecorder = ShortcutRecorder()
+
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
       stepHeader(
         title: "Choose Your Shortcut",
-        subtitle: "Press this from any app to trigger wdym. You can customise further in Options."
+        subtitle: "Press this from any app to trigger wdym."
       )
 
-      Picker("Shortcut", selection: shortcutPresetBinding) {
-        ForEach(ShortcutPreset.allCases) { preset in
-          Text(preset.title).tag(preset.rawValue)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      VStack(alignment: .leading, spacing: 10) {
+        Toggle("Use custom shortcut", isOn: useCustomShortcutBinding)
+          .toggleStyle(.switch)
+          .foregroundStyle(.white)
 
-      Text("Active: \(settingsStore.settings.activeShortcutBinding.title)")
-        .font(.caption)
-        .foregroundStyle(Color.white.opacity(0.55))
+        if settingsStore.settings.useCustomShortcut {
+          HStack(spacing: 10) {
+            Button(shortcutRecorder.isRecording ? "Stop Recording" : "Record Shortcut") {
+              toggleRecording()
+            }
+            .buttonStyle(FilledSetupButtonStyle())
+            .frame(maxWidth: 160)
+
+            Text(shortcutRecorder.statusMessage)
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.62))
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        } else {
+          Picker("Shortcut", selection: shortcutPresetBinding) {
+            ForEach(ShortcutPreset.allCases) { preset in
+              Text(preset.title).tag(preset.rawValue)
+            }
+          }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        Text("Active: \(settingsStore.settings.activeShortcutBinding.title)")
+          .font(.caption)
+          .foregroundStyle(Color.white.opacity(0.55))
+      }
 
       Spacer()
 
       Button("Next →") { onNext() }
         .buttonStyle(FilledSetupButtonStyle())
+    }
+    .onDisappear {
+      shortcutRecorder.stopRecording()
     }
   }
 
@@ -161,6 +187,25 @@ private struct ShortcutStepView: View {
       get: { settingsStore.settings.shortcutPresetRawValue },
       set: { settingsStore.updateShortcutPresetRawValue($0) }
     )
+  }
+
+  private var useCustomShortcutBinding: Binding<Bool> {
+    Binding(
+      get: { settingsStore.settings.useCustomShortcut },
+      set: { settingsStore.updateUseCustomShortcut($0) }
+    )
+  }
+
+  private func toggleRecording() {
+    if shortcutRecorder.isRecording {
+      shortcutRecorder.stopRecording()
+      return
+    }
+
+    shortcutRecorder.startRecording { binding in
+      settingsStore.updateCustomShortcut(binding)
+      settingsStore.updateUseCustomShortcut(true)
+    }
   }
 }
 
