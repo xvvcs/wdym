@@ -44,7 +44,7 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 | ⌨️ **Global shortcut** | Trigger from any app with a fully customisable key combination |
 | ✏️ **Smart cleanup** | Removes filler words, fixes punctuation, and structures your intent |
 | 🤖 **AI refinement** | Optional Groq integration for fast, high-quality LLM polish |
-| 🎨 **Prompt styles** | General and coding presets to match your use case |
+| 🎨 **Prompt styles** | General, Coding, Writing, Search, Research, Best Practices |
 | 📋 **Flexible output** | Replace in-field, copy to clipboard, or both — your choice |
 | 🐱 **Terminal-aware** | First-class Kitty/OpenCode support via remote control integration |
 | 🔒 **Privacy first** | No history, no analytics — keys in Keychain, prefs in UserDefaults |
@@ -55,9 +55,11 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 
 ### Download (recommended)
 
-1. Grab the latest release from the [**Releases page**](https://github.com/xvvcs/wdym/releases):
-   - `wdym-<version>-unsigned.dmg` — drag-and-drop installer
-   - `wdym-<version>-unsigned.zip` — manual fallback
+**Latest release:** [**v1.2.0**](https://github.com/xvvcs/wdym/releases/latest) <!-- README_VERSION -->
+
+1. Grab the latest from the [**Releases page**](https://github.com/xvvcs/wdym/releases):
+   - `wdym_installer.dmg` — drag-and-drop installer
+   - `wdym_installer.zip` — manual fallback
 2. Move `wdym.app` to `/Applications` and launch it.
 
 > **Note:** Free releases are unsigned. macOS may block first launch.
@@ -101,7 +103,7 @@ All settings live in the **Options** panel in the menu bar.
 | Setting | Options |
 |---------|---------|
 | **Output mode** | Replace + Copy · Replace only · Copy only |
-| **Prompt style** | General · Coding |
+| **Prompt style** | General · Coding · Writing · Search · Research · Best Practices |
 | **Shortcut** | Choose a preset or record your own key combination |
 | **AI refinement** | Enable Groq and enter your API key for LLM-powered polish |
 | **Groq model** | Speed-first default (`llama-3.1-8b-instant`), configurable |
@@ -124,7 +126,7 @@ For deterministic text capture inside Kitty terminal (e.g. with OpenCode), enabl
 
 2. Restart Kitty.
 3. In wdym **Options**, set the Kitty socket address to match (e.g. `unix:/tmp/prompt-refactor-kitty`).
-4. Use **Run Diagnostics** to verify the connection.
+4. Use **Run Kitty Check** in Options to verify the connection.
 
 wdym will now read the focused prompt field directly via Kitty RC and write back via paste — no clipboard interference.
 
@@ -160,9 +162,7 @@ xcodebuild \
   test
 ```
 
-See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for architecture details and [`TEST_SCENARIOS.md`](TEST_SCENARIOS.md) for the full test coverage map.
-
-The release workflow lives at [`.github/workflows/release-and-publish.yml`](.github/workflows/release-and-publish.yml).
+The release workflow is [`.github/workflows/release-and-publish.yml`](.github/workflows/release-and-publish.yml).
 
 ---
 

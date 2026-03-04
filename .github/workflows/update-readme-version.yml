@@ -1,0 +1,35 @@
+# When a release is published, update the "Latest release" link in README to the new version.
+name: Update README version
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Update version in README
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          sed -i "s/\*\*v[0-9.]*\*\*/\*\*${TAG}\*\*/" README.md
+
+      - name: Commit and push
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || {
+            git add README.md
+            git commit -m "docs: set README latest release to ${TAG}"
+            git push
+          }
