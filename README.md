@@ -55,12 +55,19 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 
 ### Download (recommended)
 
-**Latest release:** [**v1.2.0**](https://github.com/xvvcs/wdym/releases/latest) <!-- README_VERSION -->
+**Latest release:** [**can be checked here**](https://github.com/xvvcs/wdym/releases/latest) <!-- README_VERSION -->
 
 1. Grab the latest from the [**Releases page**](https://github.com/xvvcs/wdym/releases):
    - `wdym_installer.dmg` — drag-and-drop installer
    - `wdym_installer.zip` — manual fallback
-2. Move `wdym.app` to `/Applications` and launch it.
+2. Move `wdym.app` to `/Applications`.
+3. In the dialog that appears, click Open again.
+
+If macOS still blocks it:
+
+1. Open System Settings → Privacy & Security.
+
+2. Scroll down to “‎`wdym.app` was blocked from use…” and click Open Anyway.
 
 > **Note:** Free releases are unsigned. macOS may block first launch.
 >
@@ -69,7 +76,9 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 >
 > Terminal fallback:
 > ```bash
+> cp -R "/Volumes/wdym/wdym.app" /Applications/
 > xattr -dr com.apple.quarantine /Applications/wdym.app
+> open /Applications/wdym.app
 > ```
 
 ### Build from source
