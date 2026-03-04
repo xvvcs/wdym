@@ -90,6 +90,24 @@ public struct PromptRefactorService: Sendable {
                 "- Improve tone and readability while preserving the user's intent.",
                 "- Keep style natural and audience-appropriate."
             ]
+        case .search:
+            return [
+                "- Output a keyword-dense noun phrase; strip all conversational framing and filler words.",
+                "- Retain subject nouns, qualifiers, and intent modifiers only; target 5–10 words.",
+                "- Embed technical qualifiers (language, platform, version) inline; omit trailing punctuation."
+            ]
+        case .research:
+            return [
+                "- Frame the core question with a clear subject, investigation focus, and desired outcome.",
+                "- Specify scope and depth requirements before the topic statement.",
+                "- Flag uncertain claims explicitly; distinguish established facts from emerging evidence."
+            ]
+        case .bestPractices:
+            return [
+                "- Anchor recommendations in the specific domain, stack, and audience expertise level.",
+                "- Pair each recommendation with a one-sentence rationale explaining why it matters.",
+                "- Request ranked or tiered output (essential vs. optional) with an explicit scope constraint."
+            ]
         }
     }
 

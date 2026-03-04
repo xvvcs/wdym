@@ -62,6 +62,12 @@ extension PromptStyle {
             return "Coding"
         case .writing:
             return "Writing"
+        case .search:
+            return "Search"
+        case .research:
+            return "Research"
+        case .bestPractices:
+            return "Best Practices"
         }
     }
 }
