@@ -60,4 +60,10 @@ struct PromptRefactorAppTests {
         #expect(PromptStyle.coding.displayTitle == "Coding")
         #expect(PromptStyle.writing.displayTitle == "Writing")
     }
+
+    @Test func groqModelFallbackUsesSpeedFirstDefault() {
+        let model = GroqModel.from(rawValue: "unknown-model")
+
+        #expect(model == .llama31_8bInstant)
+    }
 }

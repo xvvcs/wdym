@@ -6,7 +6,8 @@ Swift-based macOS project for refactoring raw dictation text into clearer AI-rea
 
 - Implementation plan is documented in `IMPLEMENTATION_PLAN.md`.
 - Core TDD scaffolding is in place as a Swift package.
-- `PromptRefactorService` currently provides deterministic local normalization and prompt construction.
+- Menu bar preview app is available in `PromptRefactorApp/PromptRefactorApp.xcodeproj`.
+- Groq integration is implemented with key input in the Options window.
 
 ## Decisions Locked
 
@@ -22,4 +23,8 @@ Swift-based macOS project for refactoring raw dictation text into clearer AI-rea
 
 ```bash
 swift test
+```
+
+```bash
+xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test
 ```

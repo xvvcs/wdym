@@ -7,6 +7,7 @@ struct AppSettings: Equatable {
     var promptStyleRawValue: String
     var includeClarifyingQuestions: Bool
     var useGroqRefinement: Bool
+    var groqModelRawValue: String
     var shortcutPresetRawValue: String
 
     static let `default` = AppSettings(
@@ -14,6 +15,7 @@ struct AppSettings: Equatable {
         promptStyleRawValue: PromptStyle.general.rawValue,
         includeClarifyingQuestions: true,
         useGroqRefinement: false,
+        groqModelRawValue: GroqModel.llama31_8bInstant.rawValue,
         shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue
     )
 
@@ -65,11 +67,17 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
         persist()
     }
 
+    func updateGroqModelRawValue(_ value: String) {
+        settings.groqModelRawValue = value
+        persist()
+    }
+
     private func persist() {
         userDefaults.set(settings.outputModeRawValue, forKey: Keys.outputMode)
         userDefaults.set(settings.promptStyleRawValue, forKey: Keys.promptStyle)
         userDefaults.set(settings.includeClarifyingQuestions, forKey: Keys.includeClarifyingQuestions)
         userDefaults.set(settings.useGroqRefinement, forKey: Keys.useGroqRefinement)
+        userDefaults.set(settings.groqModelRawValue, forKey: Keys.groqModel)
         userDefaults.set(settings.shortcutPresetRawValue, forKey: Keys.shortcutPreset)
     }
 
@@ -85,6 +93,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
             ? AppSettings.default.useGroqRefinement
             : userDefaults.bool(forKey: Keys.useGroqRefinement)
 
+        let groqModel = userDefaults.string(forKey: Keys.groqModel) ?? AppSettings.default.groqModelRawValue
+
         let shortcutPreset = userDefaults.string(forKey: Keys.shortcutPreset) ?? AppSettings.default.shortcutPresetRawValue
 
         return AppSettings(
@@ -92,6 +102,7 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
             promptStyleRawValue: promptStyle,
             includeClarifyingQuestions: includeClarifyingQuestions,
             useGroqRefinement: useGroqRefinement,
+            groqModelRawValue: groqModel,
             shortcutPresetRawValue: shortcutPreset
         )
     }
@@ -102,5 +113,6 @@ private enum Keys {
     static let promptStyle = "promptStyle"
     static let includeClarifyingQuestions = "includeClarifyingQuestions"
     static let useGroqRefinement = "useGroqRefinement"
+    static let groqModel = "groqModel"
     static let shortcutPreset = "shortcutPreset"
 }

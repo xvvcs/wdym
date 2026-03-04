@@ -32,20 +32,35 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-011 | `storeLoadsExpectedDefaultValues` | Fresh install / no saved settings | App settings default values | Done |
 | APP-012 | `storePersistsUpdatedValuesAcrossInstances` | User changes settings and app reloads | UserDefaults-backed persistence behavior | Done |
 | APP-013 | `settingsShortcutPresetFallsBackWhenPersistedValueIsInvalid` | Corrupted/invalid persisted shortcut value | Store-level fallback safety for shortcut preset | Done |
+| APP-014 | `groqModelFallbackUsesSpeedFirstDefault` | Stored Groq model is invalid | Safe default model fallback (`llama-3.1-8b-instant`) | Done |
+| APP-015 | `providerFactoryReturnsNilWhenGroqDisabled` | Groq toggle is off | Provider is not created while refinement is disabled | Done |
+| APP-016 | `providerFactoryReturnsNilWhenApiKeyMissing` | Groq toggle is on but key is missing | Provider creation guard for missing credentials | Done |
+| APP-017 | `providerFactoryReturnsGroqProviderWhenEnabledAndConfigured` | Groq toggle is on and key exists | Provider factory wiring for Groq path | Done |
+| APP-018 | `groqRequestBuilderProducesSpeedFirstPayload` | LLM request is converted for Groq API | Payload model, temperature, and messages structure | Done |
+| APP-019 | `groqProviderReturnsResponseMessageContent` | Groq API returns a valid completion payload | Response decoding and output extraction | Done |
+| APP-020 | `groqProviderThrowsForBadStatusCode` | Groq API responds with non-2xx status | Error handling for HTTP failure responses | Done |
+| APP-021 | `runtimeLoadsStoredGroqApiKeyIntoSecureFieldState` | App starts with existing Groq key in Keychain | Options secure field preloads saved API key | Done |
+| APP-022 | `saveGroqApiKeyKeepsValueAndClearRemovesIt` | User saves then clears API key from options | Saved key remains in secure field and clear resets state | Done |
 
 Source files:
 - `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
 - `PromptRefactorApp/PromptRefactorApp/AppOptions.swift`
 - `PromptRefactorApp/PromptRefactorAppTests/HotkeyServiceTests.swift`
 - `PromptRefactorApp/PromptRefactorAppTests/AppSettingsStoreTests.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/ProviderFactoryTests.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/GroqProviderTests.swift`
 - `PromptRefactorApp/PromptRefactorApp/Platform/Hotkey/HotkeyModels.swift`
 - `PromptRefactorApp/PromptRefactorApp/Platform/Storage/AppSettingsStore.swift`
+- `PromptRefactorApp/PromptRefactorApp/Providers/ProviderFactory.swift`
+- `PromptRefactorApp/PromptRefactorApp/Providers/Groq/GroqRequestBuilder.swift`
+- `PromptRefactorApp/PromptRefactorApp/Providers/Groq/GroqProvider.swift`
+- `PromptRefactorApp/PromptRefactorAppTests/AppRuntimeControllerTests.swift`
 
 ## Planned Next Test Groups
 
 | Group | Scenarios to Add | Priority |
 |---|---|---|
-| Provider Contracts | Timeout, malformed payload, empty response, retry/backoff | High |
+| Provider Contracts | Timeout, malformed payload, empty response, retry/backoff | Medium |
 | Orchestration | Trigger pipeline success/failure, cancellation on rapid re-trigger | High |
 | Accessibility Flow | Permission denied/granted/revoked, focused field read/write failure fallback | High |
 | Performance | Local normalization budget and end-to-end latency budget checks | Medium |
@@ -55,4 +70,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (4 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (13 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (22 tests)

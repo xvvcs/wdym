@@ -20,7 +20,7 @@ struct PromptRefactorAppApp: App {
         .menuBarExtraStyle(.window)
 
         WindowGroup("Options", id: "options") {
-            OptionsView(settingsStore: runtime.settingsStore)
+            OptionsView(runtime: runtime)
                 .frame(minWidth: 420, minHeight: 280)
         }
     }
@@ -54,10 +54,10 @@ private struct MenuBarContent: View {
 }
 
 private struct OptionsView: View {
-    @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
+    @ObservedObject var runtime: AppRuntimeController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Prompt Refactor Options")
                 .font(.title3)
                 .fontWeight(.semibold)
@@ -81,7 +81,48 @@ private struct OptionsView: View {
             }
 
             Toggle("Include clarifying questions", isOn: includeClarifyingQuestionsBinding)
-            Toggle("Use Groq refinement (coming in M3)", isOn: useGroqRefinementBinding)
+            Toggle("Use Groq refinement", isOn: useGroqRefinementBinding)
+
+            Picker("Groq model", selection: groqModelBinding) {
+                ForEach(GroqModel.allCases) { model in
+                    Text(model.title).tag(model.rawValue)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Groq API key")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                SecureField("gsk_...", text: $runtime.groqAPIKeyInput)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Button("Save API Key") {
+                        runtime.saveGroqAPIKey()
+                    }
+
+                    Button("Clear") {
+                        runtime.clearGroqAPIKey()
+                    }
+
+                    if runtime.hasStoredGroqAPIKey {
+                        Text("Saved")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Not set")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !runtime.groqAPIKeyMessage.isEmpty {
+                    Text(runtime.groqAPIKeyMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Spacer()
 
@@ -94,36 +135,43 @@ private struct OptionsView: View {
 
     private var outputModeBinding: Binding<String> {
         Binding(
-            get: { settingsStore.settings.outputModeRawValue },
-            set: { settingsStore.updateOutputModeRawValue($0) }
+            get: { runtime.settingsStore.settings.outputModeRawValue },
+            set: { runtime.settingsStore.updateOutputModeRawValue($0) }
         )
     }
 
     private var promptStyleBinding: Binding<String> {
         Binding(
-            get: { settingsStore.settings.promptStyleRawValue },
-            set: { settingsStore.updatePromptStyleRawValue($0) }
+            get: { runtime.settingsStore.settings.promptStyleRawValue },
+            set: { runtime.settingsStore.updatePromptStyleRawValue($0) }
         )
     }
 
     private var shortcutPresetBinding: Binding<String> {
         Binding(
-            get: { settingsStore.settings.shortcutPresetRawValue },
-            set: { settingsStore.updateShortcutPresetRawValue($0) }
+            get: { runtime.settingsStore.settings.shortcutPresetRawValue },
+            set: { runtime.settingsStore.updateShortcutPresetRawValue($0) }
+        )
+    }
+
+    private var groqModelBinding: Binding<String> {
+        Binding(
+            get: { runtime.settingsStore.settings.groqModelRawValue },
+            set: { runtime.settingsStore.updateGroqModelRawValue($0) }
         )
     }
 
     private var includeClarifyingQuestionsBinding: Binding<Bool> {
         Binding(
-            get: { settingsStore.settings.includeClarifyingQuestions },
-            set: { settingsStore.updateIncludeClarifyingQuestions($0) }
+            get: { runtime.settingsStore.settings.includeClarifyingQuestions },
+            set: { runtime.settingsStore.updateIncludeClarifyingQuestions($0) }
         )
     }
 
     private var useGroqRefinementBinding: Binding<Bool> {
         Binding(
-            get: { settingsStore.settings.useGroqRefinement },
-            set: { settingsStore.updateUseGroqRefinement($0) }
+            get: { runtime.settingsStore.settings.useGroqRefinement },
+            set: { runtime.settingsStore.updateUseGroqRefinement($0) }
         )
     }
 }

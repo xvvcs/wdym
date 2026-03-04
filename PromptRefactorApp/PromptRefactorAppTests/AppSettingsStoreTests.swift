@@ -22,6 +22,7 @@ struct AppSettingsStoreTests {
         store.updatePromptStyleRawValue("coding")
         store.updateIncludeClarifyingQuestions(false)
         store.updateUseGroqRefinement(true)
+        store.updateGroqModelRawValue(GroqModel.llama33_70bVersatile.rawValue)
         store.updateShortcutPresetRawValue(ShortcutPreset.commandOptionR.rawValue)
 
         let reloaded = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
@@ -30,6 +31,7 @@ struct AppSettingsStoreTests {
         #expect(reloaded.settings.promptStyleRawValue == "coding")
         #expect(!reloaded.settings.includeClarifyingQuestions)
         #expect(reloaded.settings.useGroqRefinement)
+        #expect(reloaded.settings.groqModelRawValue == GroqModel.llama33_70bVersatile.rawValue)
         #expect(reloaded.settings.shortcutPresetRawValue == ShortcutPreset.commandOptionR.rawValue)
     }
 
