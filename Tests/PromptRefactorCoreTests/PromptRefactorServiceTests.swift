@@ -21,6 +21,33 @@ import Testing
     #expect(normalized == "Please summarize this meeting and list next steps.")
 }
 
+@Test func normalizeDictationRemovesSurroundingParentheses() {
+    let service = PromptRefactorService()
+    let raw = "(write a function to reverse a string)"
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "Write a function to reverse a string.")
+}
+
+@Test func normalizeDictationRemovesNestedSurroundingParentheses() {
+    let service = PromptRefactorService()
+    let raw = "((list all active users))"
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "List all active users.")
+}
+
+@Test func normalizeDictationLeavesUnbalancedParenthesesIntact() {
+    let service = PromptRefactorService()
+    let raw = "(hello) world)"
+
+    let normalized = service.normalizeDictation(raw)
+
+    #expect(normalized == "(Hello) world).")
+}
+
 @Test func buildPromptReturnsEmptyStringForEmptyInput() {
     let service = PromptRefactorService()
     let result = service.buildPrompt(from: "   ")

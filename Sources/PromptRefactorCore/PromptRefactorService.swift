@@ -35,6 +35,7 @@ public struct PromptRefactorService: Sendable {
             return ""
         }
 
+        text = stripSurroundingParentheses(from: text)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         text = stripFillerPhrases(from: text)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
@@ -68,6 +69,28 @@ public struct PromptRefactorService: Sendable {
                 "- Keep style natural and audience-appropriate."
             ]
         }
+    }
+
+    private func stripSurroundingParentheses(from text: String) -> String {
+        var result = text
+        while result.hasPrefix("(") && result.hasSuffix(")") {
+            let chars = Array(result)
+            var depth = 0
+            var closedEarly = false
+            for i in 0..<chars.count - 1 {
+                if chars[i] == "(" { depth += 1 }
+                else if chars[i] == ")" {
+                    depth -= 1
+                    if depth == 0 {
+                        closedEarly = true
+                        break
+                    }
+                }
+            }
+            guard !closedEarly else { break }
+            result = String(result.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
+        }
+        return result
     }
 
     private func stripFillerPhrases(from text: String) -> String {
