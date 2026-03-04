@@ -47,6 +47,7 @@ private struct MenuBarContent: View {
   @Binding var setupCompleted: Bool
 
   @Environment(\.openWindow) private var openWindow
+  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -86,6 +87,7 @@ private struct MenuBarContent: View {
       .buttonStyle(FilledActionButtonStyle())
 
       Button("Open Options") {
+        dismiss()
         NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "options")
       }
@@ -96,6 +98,7 @@ private struct MenuBarContent: View {
 
       HStack {
         Button("Rerun Setup") {
+          dismiss()
           openWindow(id: "setup")
         }
         .buttonStyle(.plain)
@@ -105,6 +108,7 @@ private struct MenuBarContent: View {
         Button("Reset Setup") {
           setupCompleted = false
           UserDefaults.standard.set(false, forKey: "setupCompleted")
+          dismiss()
           openWindow(id: "setup")
         }
         .buttonStyle(.plain)
