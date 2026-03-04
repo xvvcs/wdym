@@ -20,7 +20,7 @@ struct PromptRefactorAppApp: App {
     .menuBarExtraStyle(.window)
 
     WindowGroup("Options", id: "options") {
-      OptionsView(runtime: runtime)
+      OptionsView(runtime: runtime, settingsStore: runtime.settingsStore)
         .frame(minWidth: 520, minHeight: 460)
     }
   }
@@ -107,6 +107,7 @@ private struct MenuBarContent: View {
 
 private struct OptionsView: View {
   @ObservedObject var runtime: AppRuntimeController
+  @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
 
   var body: some View {
     ScrollView {
@@ -131,6 +132,7 @@ private struct OptionsView: View {
                 Text(mode.title).tag(mode.rawValue)
               }
             }
+            .accessibilityIdentifier("options.picker.outputMode")
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(maxWidth: 260)
@@ -142,6 +144,7 @@ private struct OptionsView: View {
                 Text(style.displayTitle).tag(style.rawValue)
               }
             }
+            .accessibilityIdentifier("options.picker.promptStyle")
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(maxWidth: 260)
@@ -153,6 +156,7 @@ private struct OptionsView: View {
                 Text(preset.title).tag(preset.rawValue)
               }
             }
+            .accessibilityIdentifier("options.picker.shortcut")
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(maxWidth: 260)
@@ -161,8 +165,14 @@ private struct OptionsView: View {
           Divider()
 
           Toggle("Include clarifying questions", isOn: includeClarifyingQuestionsBinding)
+            .accessibilityIdentifier("options.toggle.includeClarifyingQuestions")
+            .toggleStyle(.switch)
           Toggle("Terminal mode (default)", isOn: terminalModeBinding)
+            .accessibilityIdentifier("options.toggle.terminalMode")
+            .toggleStyle(.switch)
           Toggle("Auto-select all on shortcut", isOn: autoSelectAllBinding)
+            .accessibilityIdentifier("options.toggle.autoSelectAll")
+            .toggleStyle(.switch)
         }
 
         settingsCard(
@@ -170,6 +180,8 @@ private struct OptionsView: View {
           subtitle: "Deterministic capture for OpenCode, Codex, and Cloud Code"
         ) {
           Toggle("Require Kitty Remote Control", isOn: kittyRemoteControlRequiredBinding)
+            .accessibilityIdentifier("options.toggle.kittyRequired")
+            .toggleStyle(.switch)
 
           TextField("Kitty listen address", text: kittyListenAddressBinding)
             .modifier(DarkFieldStyle())
@@ -196,6 +208,8 @@ private struct OptionsView: View {
 
         settingsCard(title: "AI Provider", subtitle: "Optional post-refactor refinement") {
           Toggle("Use Groq refinement", isOn: useGroqRefinementBinding)
+            .accessibilityIdentifier("options.toggle.useGroq")
+            .toggleStyle(.switch)
 
           settingRow(label: "Groq model") {
             Picker("Groq model", selection: groqModelBinding) {
@@ -203,6 +217,7 @@ private struct OptionsView: View {
                 Text(model.title).tag(model.rawValue)
               }
             }
+            .accessibilityIdentifier("options.picker.groqModel")
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(maxWidth: 260)
@@ -297,7 +312,6 @@ private struct OptionsView: View {
 
       content()
     }
-    .foregroundStyle(.white)
     .padding(14)
     .background(
       RoundedRectangle(cornerRadius: 14)
@@ -325,71 +339,71 @@ private struct OptionsView: View {
 
   private var outputModeBinding: Binding<String> {
     Binding(
-      get: { runtime.settingsStore.settings.outputModeRawValue },
-      set: { runtime.settingsStore.updateOutputModeRawValue($0) }
+      get: { settingsStore.settings.outputModeRawValue },
+      set: { settingsStore.updateOutputModeRawValue($0) }
     )
   }
 
   private var promptStyleBinding: Binding<String> {
     Binding(
-      get: { runtime.settingsStore.settings.promptStyleRawValue },
-      set: { runtime.settingsStore.updatePromptStyleRawValue($0) }
+      get: { settingsStore.settings.promptStyleRawValue },
+      set: { settingsStore.updatePromptStyleRawValue($0) }
     )
   }
 
   private var shortcutPresetBinding: Binding<String> {
     Binding(
-      get: { runtime.settingsStore.settings.shortcutPresetRawValue },
-      set: { runtime.settingsStore.updateShortcutPresetRawValue($0) }
+      get: { settingsStore.settings.shortcutPresetRawValue },
+      set: { settingsStore.updateShortcutPresetRawValue($0) }
     )
   }
 
   private var groqModelBinding: Binding<String> {
     Binding(
-      get: { runtime.settingsStore.settings.groqModelRawValue },
-      set: { runtime.settingsStore.updateGroqModelRawValue($0) }
+      get: { settingsStore.settings.groqModelRawValue },
+      set: { settingsStore.updateGroqModelRawValue($0) }
     )
   }
 
   private var includeClarifyingQuestionsBinding: Binding<Bool> {
     Binding(
-      get: { runtime.settingsStore.settings.includeClarifyingQuestions },
-      set: { runtime.settingsStore.updateIncludeClarifyingQuestions($0) }
+      get: { settingsStore.settings.includeClarifyingQuestions },
+      set: { settingsStore.updateIncludeClarifyingQuestions($0) }
     )
   }
 
   private var useGroqRefinementBinding: Binding<Bool> {
     Binding(
-      get: { runtime.settingsStore.settings.useGroqRefinement },
-      set: { runtime.settingsStore.updateUseGroqRefinement($0) }
+      get: { settingsStore.settings.useGroqRefinement },
+      set: { settingsStore.updateUseGroqRefinement($0) }
     )
   }
 
   private var terminalModeBinding: Binding<Bool> {
     Binding(
-      get: { runtime.settingsStore.settings.terminalModeEnabled },
-      set: { runtime.settingsStore.updateTerminalModeEnabled($0) }
+      get: { settingsStore.settings.terminalModeEnabled },
+      set: { settingsStore.updateTerminalModeEnabled($0) }
     )
   }
 
   private var autoSelectAllBinding: Binding<Bool> {
     Binding(
-      get: { runtime.settingsStore.settings.autoSelectAllOnTrigger },
-      set: { runtime.settingsStore.updateAutoSelectAllOnTrigger($0) }
+      get: { settingsStore.settings.autoSelectAllOnTrigger },
+      set: { settingsStore.updateAutoSelectAllOnTrigger($0) }
     )
   }
 
   private var kittyRemoteControlRequiredBinding: Binding<Bool> {
     Binding(
-      get: { runtime.settingsStore.settings.kittyRemoteControlRequired },
-      set: { runtime.settingsStore.updateKittyRemoteControlRequired($0) }
+      get: { settingsStore.settings.kittyRemoteControlRequired },
+      set: { settingsStore.updateKittyRemoteControlRequired($0) }
     )
   }
 
   private var kittyListenAddressBinding: Binding<String> {
     Binding(
-      get: { runtime.settingsStore.settings.kittyListenAddress },
-      set: { runtime.settingsStore.updateKittyListenAddress($0) }
+      get: { settingsStore.settings.kittyListenAddress },
+      set: { settingsStore.updateKittyListenAddress($0) }
     )
   }
 }

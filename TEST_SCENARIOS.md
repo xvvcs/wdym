@@ -66,6 +66,9 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-045 | `readFocusedScreenTextReturnsEmptySelectionWhenPromptFieldCannotBeDetected` | Screen fallback sees only transcript/output with no prompt markers | Service rejects whole-screen capture and reports empty selection instead | Done |
 | APP-046 | `readFocusedScreenTextSkipsComposerMetadataAndTranscript` | OpenCode composer footer includes mode/model/variant under prompt input | Service ignores metadata/footer/transcript and returns only prompt input line | Done |
 | APP-047 | `readFocusedScreenTextReturnsEmptySelectionWithoutCursorMetadata` | Screen fallback output does not include Kitty cursor trailer | Service rejects non-cursor-anchored capture to avoid transcript/footer false positives | Done |
+| APP-048 | `storePublishesUpdatedSettingsImmediately` | User updates a settings control in Options | Store publishes state updates immediately so controls reflect changes without repeated interaction | Done |
+| APP-049 | `storePublishesForEveryDistinctSettingChange` | User changes multiple options in one session | Store publishes each distinct change so toggles and dependent controls stay in sync | Done |
+| APP-050 | `storeDoesNotPublishWhenValueDoesNotChange` | User clicks an option that resolves to the same value | Store avoids redundant publishes and unnecessary UI churn | Done |
 
 Source files:
 - `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
@@ -101,4 +104,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (4 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (47 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (50 tests)
