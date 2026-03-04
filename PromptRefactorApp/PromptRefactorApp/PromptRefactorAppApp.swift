@@ -102,6 +102,15 @@ private struct MenuBarContent: View {
         .font(.subheadline)
         .foregroundStyle(Color.white.opacity(0.5))
 
+        Button("Reset Setup") {
+          setupCompleted = false
+          UserDefaults.standard.set(false, forKey: "setupCompleted")
+          openWindow(id: "setup")
+        }
+        .buttonStyle(.plain)
+        .font(.subheadline)
+        .foregroundStyle(Color.white.opacity(0.5))
+
         Spacer()
 
         Button("Quit") {
