@@ -40,3 +40,37 @@ import Testing
     #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
     #expect(result.contains("If critical details are missing, end with up to 2 clarifying questions."))
 }
+
+@Test func clarifyPromptRemovesParenthesesAndStripsLeadingTrailingQuotes() {
+    let service = PromptRefactorService()
+    let output = "\"Create a function (with error handling) that parses data.\""
+
+    let clarified = service.clarifyPrompt(output)
+
+    #expect(clarified == "Create a function that parses data.")
+}
+
+@Test func clarifyPromptStripsLeadingAndTrailingDoubleQuotes() {
+    let service = PromptRefactorService()
+    let output = "\"Write a clear, actionable prompt.\""
+
+    let clarified = service.clarifyPrompt(output)
+
+    #expect(clarified == "Write a clear, actionable prompt.")
+}
+
+@Test func clarifyPromptPreservesCommasDotsExclamationMarksAndQuestionMarks() {
+    let service = PromptRefactorService()
+    let output = "Do this, then that! Really? Yes."
+
+    let clarified = service.clarifyPrompt(output)
+
+    #expect(clarified == "Do this, then that! Really? Yes.")
+}
+
+@Test func clarifyPromptReturnsEmptyForEmptyInput() {
+    let service = PromptRefactorService()
+
+    #expect(service.clarifyPrompt("") == "")
+    #expect(service.clarifyPrompt("   ") == "")
+}

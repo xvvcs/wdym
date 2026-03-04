@@ -12,6 +12,10 @@ Compact tracker for implemented and planned tests.
 | PRS-002 | `normalizeDictationAddsTerminalPunctuationIfMissing` | Input has no ending punctuation | Sentence finalization (`.`) and capitalization | Done |
 | PRS-003 | `buildPromptReturnsEmptyStringForEmptyInput` | Input is empty/whitespace | Empty-input guard path in prompt builder | Done |
 | PRS-004 | `buildPromptIncludesCodingSpecificInstructions` | Style preset is `.coding` | Style-specific instructions + normalized task inclusion | Done |
+| PRS-005 | `clarifyPromptRemovesParenthesesAndStripsLeadingTrailingQuotes` | Output has parens and is wrapped in quotes | Post-refactor cleanup: removes `()`, strips leading/trailing `"` | Done |
+| PRS-005b | `clarifyPromptStripsLeadingAndTrailingDoubleQuotes` | Output is wrapped in double quotes | Strips surrounding quotes for clear prompt | Done |
+| PRS-006 | `clarifyPromptPreservesCommasDotsExclamationMarksAndQuestionMarks` | Output has punctuation | Preserves `,.!?` in clarified prompt | Done |
+| PRS-007 | `clarifyPromptReturnsEmptyForEmptyInput` | Input is empty/whitespace | Empty-input guard path | Done |
 
 Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 
@@ -106,5 +110,5 @@ Source files:
 
 - Date: 2026-03-04
 - Command baseline:
-  - `swift test` passing (4 tests)
+  - `swift test` passing (7 tests)
   - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (53 tests)

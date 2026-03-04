@@ -216,6 +216,11 @@ final class AppRuntimeController: ObservableObject {
             }
         }
 
+        let clarified = refactorService.clarifyPrompt(finalOutput)
+        if !clarified.isEmpty {
+            finalOutput = clarified
+        }
+
         let outputMode = preferences.outputMode
         var replaced = false
         var copied = false
