@@ -4,3 +4,10 @@
 DerivedData/
 xcuserdata/
 *.xcuserstate
+
+# Local docs and plans (keep on disk, do not publish)
+AGENTS.md
+IMPLEMENTATION_PLAN.md
+SCAFFOLD_MAP.md
+TEST_SCENARIOS.md
+docs/
