@@ -1,71 +1,170 @@
-# wdym
+<div align="center">
 
-Wdym ("What do you mean") is a macOS menu bar app that refines rough dictation or messy text into clear, useful prompts in seconds.
+<h1>wdym</h1>
 
-## What it is for
+<p><strong>What do you mean?</strong> — Turn rough dictation and messy text into sharp, AI-ready prompts in seconds.</p>
 
-- Improving prompt quality before sending to your coding assistant or AI tool.
-- Speeding up editing flow with a global shortcut from any app.
-- Keeping your workflow lightweight: no heavy UI, no extra app windows while you work.
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple&logoColor=white)](https://github.com/xvvcs/wdym/releases)
+[![Swift](https://img.shields.io/badge/Swift-6.0-f05138?logo=swift&logoColor=white)](https://swift.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Releases](https://img.shields.io/github/v/release/xvvcs/wdym?label=latest)](https://github.com/xvvcs/wdym/releases)
+
+</div>
+
+---
+
+## What is wdym?
+
+**wdym** is a lightweight macOS menu bar app for people who think faster than they type or dictate.
+
+Press a global shortcut from **any app**, and wdym instantly captures whatever is in your focused text field, cleans it up, and replaces it with a clear, structured prompt — ready for your AI coding assistant, chat tool, or search bar.
+
+No window switching. No copy-paste loops. Just better prompts, instantly.
+
+---
+
+## Screenshots / Demo
+
+> 📸 _Screenshots and a short demo video will be added here once the first public release is available._
+>
+> <!-- Replace the section below with actual screenshots or a demo GIF/video -->
+>
+> | Menu Bar | Options Panel |
+> |----------|---------------|
+> | _screenshot coming soon_ | _screenshot coming soon_ |
+
+---
 
 ## Highlights
 
-- Menu bar first experience with quick status and controls.
-- Output modes for replace, copy, or both.
-- Prompt style presets for general and coding use.
-- Custom global shortcut support, including user-recorded key combinations.
-- Terminal-aware capture with Kitty/OpenCode support.
+| Feature | Details |
+|---------|---------|
+| 🖥️ **Menu bar first** | Lives quietly in your menu bar — no Dock icon, no windows in the way |
+| ⌨️ **Global shortcut** | Trigger from any app with a fully customisable key combination |
+| ✏️ **Smart cleanup** | Removes filler words, fixes punctuation, and structures your intent |
+| 🤖 **AI refinement** | Optional Groq integration for fast, high-quality LLM polish |
+| 🎨 **Prompt styles** | General and coding presets to match your use case |
+| 📋 **Flexible output** | Replace in-field, copy to clipboard, or both — your choice |
+| 🐱 **Terminal-aware** | First-class Kitty/OpenCode support via remote control integration |
+| 🔒 **Privacy first** | No history, no analytics — keys in Keychain, prefs in UserDefaults |
 
-## Privacy
+---
 
-- No prompt history is stored.
-- No analytics or tracking are included.
-- Prompt text is handled in memory and discarded after processing.
-- With Groq disabled, processing stays local.
-- With Groq enabled, only the current prompt text is sent to Groq over HTTPS.
-- API keys remain local in macOS Keychain, and app preferences remain local in UserDefaults.
+## Installation
 
-## Download
+### Download (recommended)
 
-Download the latest release from the GitHub **Releases** page:
+1. Grab the latest release from the [**Releases page**](https://github.com/xvvcs/wdym/releases):
+   - `wdym-<version>-unsigned.dmg` — drag-and-drop installer
+   - `wdym-<version>-unsigned.zip` — manual fallback
+2. Move `wdym.app` to `/Applications` and launch it.
 
-- `wdym-<version>-unsigned.dmg` (recommended)
-- `wdym-<version>-unsigned.zip` (fallback)
+> **Note:** Free releases are unsigned. macOS may block first launch.
+>
+> - Right-click `wdym.app` → **Open**, or
+> - **System Settings → Privacy & Security → Open Anyway**
+>
+> Terminal fallback:
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/wdym.app
+> ```
 
-Move `wdym.app` to `/Applications` and launch.
+### Build from source
 
-Because free releases are unsigned, macOS may block first launch:
-
-1. Right-click `wdym.app` and choose **Open**.
-2. If needed, go to **System Settings -> Privacy & Security -> Open Anyway**.
-
-Terminal fallback if required:
+Requirements: Xcode 16+, macOS 14+
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/wdym.app
+git clone https://github.com/xvvcs/wdym.git
+cd wdym
+open PromptRefactorApp/PromptRefactorApp.xcodeproj
 ```
+
+Build and run the `PromptRefactorApp` scheme on your local Mac.
+
+---
 
 ## Quick Start
 
-1. Launch `wdym` from the menu bar.
-2. Open **Options** and grant Accessibility permission.
-3. Choose output mode, prompt style, and shortcut.
-4. Place cursor in a text field (or select text) and press your shortcut.
-5. `wdym` refines and applies output using your chosen mode.
+1. **Launch** `wdym` — a menu bar icon appears.
+2. Open **Options** and grant **Accessibility** permission when prompted.
+3. Choose your **output mode**, **prompt style**, and **shortcut**.
+4. Place your cursor in any text field (or select text) in any app.
+5. Press your shortcut — wdym refines the text and applies the output.
 
-## Kitty/OpenCode (optional)
+---
 
-If you use Kitty/OpenCode and want deterministic capture, add this to Kitty config:
+## Configuration
 
-```text
-allow_remote_control socket-only
-listen_on unix:/tmp/prompt-refactor-kitty
+All settings live in the **Options** panel in the menu bar.
+
+| Setting | Options |
+|---------|---------|
+| **Output mode** | Replace + Copy · Replace only · Copy only |
+| **Prompt style** | General · Coding |
+| **Shortcut** | Choose a preset or record your own key combination |
+| **AI refinement** | Enable Groq and enter your API key for LLM-powered polish |
+| **Groq model** | Speed-first default (`llama-3.1-8b-instant`), configurable |
+| **Auto-select** | Automatically select all text in focused field before capture |
+
+API keys are stored securely in **macOS Keychain**. All other preferences are stored in **UserDefaults** and never leave your machine.
+
+---
+
+## Kitty / OpenCode Integration
+
+For deterministic text capture inside Kitty terminal (e.g. with OpenCode), enable Remote Control:
+
+1. Add to your Kitty config (`~/.config/kitty/kitty.conf`):
+
+   ```text
+   allow_remote_control socket-only
+   listen_on unix:/tmp/prompt-refactor-kitty
+   ```
+
+2. Restart Kitty.
+3. In wdym **Options**, set the Kitty socket address to match (e.g. `unix:/tmp/prompt-refactor-kitty`).
+4. Use **Run Diagnostics** to verify the connection.
+
+wdym will now read the focused prompt field directly via Kitty RC and write back via paste — no clipboard interference.
+
+---
+
+## Privacy
+
+wdym is designed to stay out of your way and out of your data.
+
+- ❌ No prompt history stored
+- ❌ No analytics or telemetry
+- ✅ Prompt text handled in memory, discarded after processing
+- ✅ Local-only processing when Groq is disabled
+- ✅ When Groq is enabled, only the current prompt text is sent over HTTPS
+- ✅ API keys stored in macOS Keychain; preferences stored in UserDefaults
+
+---
+
+## Contributing
+
+Contributions are welcome! Here's how to get started:
+
+```bash
+# Run core package tests
+swift test
+
+# Run app tests
+xcodebuild \
+  -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" \
+  -scheme "PromptRefactorApp" \
+  -destination "platform=macOS" \
+  -only-testing:PromptRefactorAppTests \
+  test
 ```
 
-Then set the same address in `wdym` Options.
+See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for architecture details and [`TEST_SCENARIOS.md`](TEST_SCENARIOS.md) for the full test coverage map.
 
-## For contributors
+The release workflow lives at [`.github/workflows/release-and-publish.yml`](.github/workflows/release-and-publish.yml).
 
-- Core package tests: `swift test`
-- App tests: `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test`
-- Free release workflow: `.github/workflows/release-and-publish.yml`
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Prompt Refactor contributors
