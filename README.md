@@ -1,4 +1,5 @@
 <div align="center">
+<img width="200" height="223" alt="image" src="https://github.com/user-attachments/assets/981f1089-172e-4a1d-803f-bb8c230b939b" />
 
 <h1>wdym</h1>
 
