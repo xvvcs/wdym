@@ -15,7 +15,7 @@ struct PromptRefactorAppApp: App {
 
     var body: some Scene {
         MenuBarExtra("Prompt Refactor", systemImage: "wand.and.stars") {
-            MenuBarContent(status: $runtime.status, refactorClipboard: runtime.refactorClipboard)
+            MenuBarContent(status: $runtime.status, refactorNow: runtime.refactorNow)
         }
         .menuBarExtraStyle(.window)
 
@@ -28,13 +28,13 @@ struct PromptRefactorAppApp: App {
 
 private struct MenuBarContent: View {
     @Binding var status: String
-    let refactorClipboard: () -> Void
+    let refactorNow: () -> Void
 
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Refactor Clipboard") {
-            refactorClipboard()
+        Button("Refactor Now") {
+            refactorNow()
         }
 
         Button("Open Options") {
@@ -81,11 +81,41 @@ private struct OptionsView: View {
             }
 
             Toggle("Include clarifying questions", isOn: includeClarifyingQuestionsBinding)
+            Toggle("Terminal mode (default)", isOn: terminalModeBinding)
+            Toggle("Auto-select all on shortcut", isOn: autoSelectAllBinding)
             Toggle("Use Groq refinement", isOn: useGroqRefinementBinding)
 
             Picker("Groq model", selection: groqModelBinding) {
                 ForEach(GroqModel.allCases) { model in
                     Text(model.title).tag(model.rawValue)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Accessibility")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    if runtime.isAccessibilityTrusted {
+                        Text("Enabled")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Not granted")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                HStack {
+                    Button("Request Access") {
+                        runtime.requestAccessibilityAccess()
+                    }
+
+                    Button("Open Settings") {
+                        runtime.openAccessibilitySettings()
+                    }
                 }
             }
 
@@ -172,6 +202,20 @@ private struct OptionsView: View {
         Binding(
             get: { runtime.settingsStore.settings.useGroqRefinement },
             set: { runtime.settingsStore.updateUseGroqRefinement($0) }
+        )
+    }
+
+    private var terminalModeBinding: Binding<Bool> {
+        Binding(
+            get: { runtime.settingsStore.settings.terminalModeEnabled },
+            set: { runtime.settingsStore.updateTerminalModeEnabled($0) }
+        )
+    }
+
+    private var autoSelectAllBinding: Binding<Bool> {
+        Binding(
+            get: { runtime.settingsStore.settings.autoSelectAllOnTrigger },
+            set: { runtime.settingsStore.updateAutoSelectAllOnTrigger($0) }
         )
     }
 }

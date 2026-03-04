@@ -5,6 +5,7 @@ import PromptRefactorCore
 @MainActor
 final class AppRuntimeController: ObservableObject {
     @Published var status = "Idle"
+    @Published private(set) var isAccessibilityTrusted = false
     @Published var groqAPIKeyInput = ""
     @Published private(set) var hasStoredGroqAPIKey = false
     @Published var groqAPIKeyMessage = ""
@@ -13,8 +14,13 @@ final class AppRuntimeController: ObservableObject {
 
     private let refactorService: PromptRefactorService
     private let hotkeyService: any HotkeyService
+    private let clipboardService: any ClipboardService
+    private let textCommandService: any TextCommandService
+    private let focusedTextService: any AXFocusedTextService
+    private let permissionService: any AXPermissionService
     private let keychainStore: any KeychainStore
     private let providerFactory: ProviderFactory
+    private let frontmostBundleIdentifierProvider: () -> String?
     private var cancellables: Set<AnyCancellable> = []
     private var activeRefactorTask: Task<Void, Never>?
 
@@ -22,37 +28,81 @@ final class AppRuntimeController: ObservableObject {
         self.settingsStore = UserDefaultsAppSettingsStore()
         self.refactorService = PromptRefactorService()
         self.hotkeyService = GlobalHotkeyService()
+        self.clipboardService = PasteboardClipboardService()
+        self.textCommandService = DefaultTextCommandService()
+        self.focusedTextService = DefaultAXFocusedTextService()
+        self.permissionService = DefaultAXPermissionService()
         self.keychainStore = DefaultKeychainStore()
         self.providerFactory = ProviderFactory()
+        self.frontmostBundleIdentifierProvider = { NSWorkspace.shared.frontmostApplication?.bundleIdentifier }
 
         configureHotkey()
         observeShortcutChanges()
         refreshGroqAPIKeyState()
+        refreshAccessibilityState()
     }
 
     init(
         settingsStore: UserDefaultsAppSettingsStore,
         refactorService: PromptRefactorService,
         hotkeyService: any HotkeyService,
+        clipboardService: any ClipboardService,
+        textCommandService: any TextCommandService,
+        focusedTextService: any AXFocusedTextService,
+        permissionService: any AXPermissionService,
         keychainStore: any KeychainStore,
-        providerFactory: ProviderFactory
+        providerFactory: ProviderFactory,
+        frontmostBundleIdentifierProvider: @escaping () -> String?
     ) {
         self.settingsStore = settingsStore
         self.refactorService = refactorService
         self.hotkeyService = hotkeyService
+        self.clipboardService = clipboardService
+        self.textCommandService = textCommandService
+        self.focusedTextService = focusedTextService
+        self.permissionService = permissionService
         self.keychainStore = keychainStore
         self.providerFactory = providerFactory
+        self.frontmostBundleIdentifierProvider = frontmostBundleIdentifierProvider
 
         configureHotkey()
         observeShortcutChanges()
         refreshGroqAPIKeyState()
+        refreshAccessibilityState()
+    }
+
+    func refactorNow() {
+        activeRefactorTask?.cancel()
+        activeRefactorTask = Task { [weak self] in
+            await self?.performRefactorNow()
+        }
     }
 
     func refactorClipboard() {
-        activeRefactorTask?.cancel()
-        activeRefactorTask = Task { [weak self] in
-            await self?.performRefactorClipboard()
+        refactorNow()
+    }
+
+    func requestAccessibilityAccess() {
+        if permissionService.isTrusted() {
+            refreshAccessibilityState()
+            status = "Accessibility already enabled"
+            return
         }
+
+        _ = permissionService.requestAccessIfNeeded()
+        refreshAccessibilityState()
+
+        if isAccessibilityTrusted {
+            status = "Accessibility enabled"
+            return
+        }
+
+        permissionService.openAccessibilitySettings()
+        status = "Enable Accessibility for PromptRefactorApp in System Settings"
+    }
+
+    func openAccessibilitySettings() {
+        permissionService.openAccessibilitySettings()
     }
 
     func saveGroqAPIKey() {
@@ -83,21 +133,45 @@ final class AppRuntimeController: ObservableObject {
         }
     }
 
-    private func performRefactorClipboard() async {
-        let pasteboard = NSPasteboard.general
-        guard let rawText = pasteboard.string(forType: .string), !rawText.isEmpty else {
-            status = "Clipboard empty"
+    private func performRefactorNow() async {
+        let settings = settingsStore.settings
+        let preferences = settings.refactorPreferences
+        let source = await resolveInputSource(settings: settings)
+
+        if source.kind == .clipboard, preferences.outputMode.shouldReplaceText {
+            switch source.fallbackReason {
+            case .accessibilityNotTrusted:
+                status = "Cannot replace: enable Accessibility and select text"
+            case .focusedReadFailed:
+                status = "Cannot read selected text in this app"
+            case .none:
+                status = "Cannot replace from clipboard source"
+            }
+
+            return
+        }
+
+        guard let rawText = source.text, !rawText.isEmpty else {
+            if preferences.outputMode.shouldReplaceText {
+                status = "Cannot capture text in this app; select text and retry"
+            } else {
+                status = "No focused text or clipboard text"
+            }
+
             return
         }
 
         if looksLikeSecret(rawText) {
-            status = "Skipped: clipboard looks like a secret"
+            if source.kind == .selectionCopy, let previousClipboard = source.previousClipboardText {
+                clipboardService.writeString(previousClipboard)
+            }
+
+            status = "Skipped: text looks like a secret"
             return
         }
 
         status = "Refactoring..."
 
-        let preferences = settingsStore.settings.refactorPreferences
         let options = preferences.buildOptions()
         let llmInput = refactorService.buildPrompt(from: rawText, options: options)
 
@@ -110,14 +184,14 @@ final class AppRuntimeController: ObservableObject {
         var finalOutput = localFallback
         var completionStatus = "Copied refactored prompt"
 
-        if settingsStore.settings.useGroqRefinement {
+        if settings.useGroqRefinement {
             let request = LLMRefactorRequest(
                 prompt: llmInput,
                 style: options.style,
                 language: options.language
             )
 
-            if let provider = providerFactory.makeProvider(settings: settingsStore.settings, keychainStore: keychainStore) {
+            if let provider = providerFactory.makeProvider(settings: settings, keychainStore: keychainStore) {
                 do {
                     finalOutput = try await provider.refactor(request)
                     completionStatus = "Copied refactored prompt via Groq"
@@ -131,20 +205,198 @@ final class AppRuntimeController: ObservableObject {
             }
         }
 
-        pasteboard.clearContents()
-        pasteboard.setString(finalOutput, forType: .string)
+        let outputMode = preferences.outputMode
+        var replaced = false
+        var copied = false
 
-        if preferences.outputMode == .replaceOnly {
-            status = "\(completionStatus) (replace-only pending field integration)"
-        } else {
-            status = completionStatus
+        if outputMode.shouldReplaceText {
+            switch source.kind {
+            case .focusedField:
+                do {
+                    try focusedTextService.writeFocusedText(finalOutput)
+                    replaced = true
+                } catch {
+                    replaced = false
+                }
+
+            case .selectionCopy:
+                clipboardService.writeString(finalOutput)
+                replaced = await textCommandService.pasteFromClipboard()
+
+            case .clipboard:
+                replaced = false
+            }
         }
+
+        if replaced && outputMode == .replaceOnly {
+            if let previousClipboard = source.previousClipboardText {
+                clipboardService.writeString(previousClipboard)
+            }
+        }
+
+        if outputMode.shouldCopyText {
+            clipboardService.writeString(finalOutput)
+            copied = true
+        } else if !replaced {
+            clipboardService.writeString(finalOutput)
+            copied = true
+        }
+
+        if replaced && copied {
+            status = "Replaced field and copied output"
+            return
+        }
+
+        if replaced {
+            status = "Replaced focused field text"
+            return
+        }
+
+        if copied {
+            if outputMode.shouldReplaceText {
+                switch source.fallbackReason {
+                case .accessibilityNotTrusted:
+                    status = "\(completionStatus) (accessibility not enabled; copied)"
+                case .focusedReadFailed:
+                    status = "\(completionStatus) (focused field unavailable; copied)"
+                case .none:
+                    status = "\(completionStatus) (copied)"
+                }
+            } else {
+                status = completionStatus
+            }
+
+            return
+        }
+
+        status = "Refactor finished"
+    }
+
+    private func resolveInputSource(settings: AppSettings) async -> InputSource {
+        refreshAccessibilityState()
+
+        let previousClipboard = clipboardService.readString()
+        let outputMode = settings.refactorPreferences.outputMode
+        let useTerminalShortcutFallbacks = shouldUseTerminalShortcutFallbacks(settings: settings)
+
+        if outputMode.shouldReplaceText || settings.terminalModeEnabled {
+            if let selectedText = await captureUsingCommandPipeline(
+                previousClipboardText: previousClipboard,
+                autoSelectAll: settings.autoSelectAllOnTrigger,
+                useTerminalShortcutFallbacks: useTerminalShortcutFallbacks
+            ) {
+                return InputSource(
+                    kind: .selectionCopy,
+                    text: selectedText,
+                    fallbackReason: .none,
+                    previousClipboardText: previousClipboard
+                )
+            }
+        }
+
+        if isAccessibilityTrusted {
+            if let focusedText = try? focusedTextService.readFocusedText(), !focusedText.isEmpty {
+                return InputSource(
+                    kind: .focusedField,
+                    text: focusedText,
+                    fallbackReason: .none,
+                    previousClipboardText: previousClipboard
+                )
+            }
+        }
+
+        if outputMode.shouldReplaceText {
+            return InputSource(
+                kind: .clipboard,
+                text: nil,
+                fallbackReason: isAccessibilityTrusted ? .focusedReadFailed : .accessibilityNotTrusted,
+                previousClipboardText: previousClipboard
+            )
+        }
+
+        if let selectedText = await captureUsingCommandPipeline(
+            previousClipboardText: previousClipboard,
+            autoSelectAll: settings.autoSelectAllOnTrigger,
+            useTerminalShortcutFallbacks: useTerminalShortcutFallbacks
+        ) {
+            return InputSource(
+                kind: .selectionCopy,
+                text: selectedText,
+                fallbackReason: .none,
+                previousClipboardText: previousClipboard
+            )
+        }
+
+        return InputSource(
+            kind: .clipboard,
+            text: clipboardService.readString(),
+            fallbackReason: .accessibilityNotTrusted,
+            previousClipboardText: previousClipboard
+        )
+    }
+
+    private func captureUsingCommandPipeline(
+        previousClipboardText: String?,
+        autoSelectAll: Bool,
+        useTerminalShortcutFallbacks: Bool
+    ) async -> String? {
+        let marker = "__PROMPT_REFACTOR_CAPTURE__\(UUID().uuidString)__"
+        clipboardService.writeString(marker)
+
+        if autoSelectAll {
+            _ = await textCommandService.selectAllInFocusedUI(useTerminalShortcutFallbacks: useTerminalShortcutFallbacks)
+        }
+
+        guard await textCommandService.copySelectionToClipboard(useTerminalShortcutFallbacks: useTerminalShortcutFallbacks) else {
+            restoreClipboard(previousClipboardText)
+            return nil
+        }
+
+        for _ in 0..<10 {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+
+            guard let current = clipboardService.readString() else {
+                continue
+            }
+
+            if current != marker, !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return current
+            }
+        }
+
+        restoreClipboard(previousClipboardText)
+        return nil
+    }
+
+    private func restoreClipboard(_ previousClipboardText: String?) {
+        guard let previousClipboardText else {
+            clipboardService.writeString("")
+            return
+        }
+
+        clipboardService.writeString(previousClipboardText)
+    }
+
+    private func shouldUseTerminalShortcutFallbacks(settings: AppSettings) -> Bool {
+        guard settings.terminalModeEnabled else {
+            return false
+        }
+
+        guard let bundleIdentifier = frontmostBundleIdentifierProvider() else {
+            return false
+        }
+
+        return bundleIdentifier == "net.kovidgoyal.kitty"
+    }
+
+    private func refreshAccessibilityState() {
+        isAccessibilityTrusted = permissionService.isTrusted()
     }
 
     private func configureHotkey() {
         hotkeyService.startListening(binding: settingsStore.settings.shortcutPreset.binding) { [weak self] in
             Task { @MainActor in
-                self?.refactorClipboard()
+                self?.refactorNow()
             }
         }
     }
@@ -183,4 +435,23 @@ final class AppRuntimeController: ObservableObject {
             trimmed.range(of: pattern, options: .regularExpression) != nil
         }
     }
+}
+
+private struct InputSource {
+    let kind: InputSourceKind
+    let text: String?
+    let fallbackReason: InputFallbackReason
+    let previousClipboardText: String?
+}
+
+private enum InputSourceKind {
+    case focusedField
+    case selectionCopy
+    case clipboard
+}
+
+private enum InputFallbackReason {
+    case none
+    case accessibilityNotTrusted
+    case focusedReadFailed
 }

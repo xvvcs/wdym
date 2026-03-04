@@ -160,7 +160,8 @@ Planned structure (including existing files):
 - M1: Complete
 - M2: Complete
 - M3: Complete
-- M4: Next
+- M4: Complete
+- M5: Next
 
 ### M0 - Foundation (Project setup)
 

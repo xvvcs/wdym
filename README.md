@@ -8,6 +8,7 @@ Swift-based macOS project for refactoring raw dictation text into clearer AI-rea
 - Core TDD scaffolding is in place as a Swift package.
 - Menu bar preview app is available in `PromptRefactorApp/PromptRefactorApp.xcodeproj`.
 - Groq integration is implemented with key input in the Options window.
+- Terminal-first command pipeline is enabled by default (`Cmd+A` -> `Cmd+C` -> refactor -> `Cmd+V`) with focused-field AX fallback.
 
 ## Decisions Locked
 

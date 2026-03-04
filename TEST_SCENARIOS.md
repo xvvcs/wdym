@@ -41,6 +41,16 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-020 | `groqProviderThrowsForBadStatusCode` | Groq API responds with non-2xx status | Error handling for HTTP failure responses | Done |
 | APP-021 | `runtimeLoadsStoredGroqApiKeyIntoSecureFieldState` | App starts with existing Groq key in Keychain | Options secure field preloads saved API key | Done |
 | APP-022 | `saveGroqApiKeyKeepsValueAndClearRemovesIt` | User saves then clears API key from options | Saved key remains in secure field and clear resets state | Done |
+| APP-023 | `refactorNowUsesFocusedFieldAndReplacesPlusCopiesOutput` | Focused editable field text is available | Replaces focused text and copies output in default mode | Done |
+| APP-024 | `refactorNowUsesSelectionCopyWhenFocusedFieldUnavailable` | AX value read fails but selected text exists | Cmd+C capture fallback + paste replacement path | Done |
+| APP-025 | `refactorNowSkipsSecretLikeInput` | Input resembles API token | Secret guard prevents processing and output writes | Done |
+| APP-026 | `requestAccessibilityAccessOpensSettingsWhenNotTrusted` | User triggers accessibility request while not trusted | Request flow opens accessibility settings and updates status | Done |
+| APP-027 | `requestAccessibilityAccessDoesNothingWhenAlreadyTrusted` | Accessibility permission already granted | Request flow avoids redundant prompts and preserves trusted state | Done |
+| APP-028 | `refactorNowReportsAccessibilityMissingWhenNotTrusted` | Accessibility is not granted but clipboard has text | Status explicitly reports missing accessibility permission during replace attempt | Done |
+| APP-029 | `refactorNowDoesNotReuseStaleClipboardWhenSelectionCopyFails` | AX read and Cmd+C capture both fail | Prevent stale clipboard reprocessing loop | Done |
+| APP-030 | `refactorNowSkipsSelectAllWhenAutoSelectSettingDisabled` | Auto-select setting is disabled | Command pipeline copies without issuing Cmd+A | Done |
+| APP-031 | `storeDefaultsEnableTerminalModeAndAutoSelectAll` | Fresh settings initialization | Terminal mode and auto-select defaults are enabled | Done |
+| APP-032 | `refactorNowUsesKittyShortcutFallbackProfile` | Frontmost app is Kitty terminal | Uses terminal shortcut fallback profile for select/copy capture | Done |
 
 Source files:
 - `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
@@ -55,6 +65,10 @@ Source files:
 - `PromptRefactorApp/PromptRefactorApp/Providers/Groq/GroqRequestBuilder.swift`
 - `PromptRefactorApp/PromptRefactorApp/Providers/Groq/GroqProvider.swift`
 - `PromptRefactorApp/PromptRefactorAppTests/AppRuntimeControllerTests.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Accessibility/AXPermissionService.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Accessibility/AXFocusedTextService.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Clipboard/ClipboardService.swift`
+- `PromptRefactorApp/PromptRefactorApp/Platform/Interaction/TextCommandService.swift`
 
 ## Planned Next Test Groups
 
@@ -62,7 +76,7 @@ Source files:
 |---|---|---|
 | Provider Contracts | Timeout, malformed payload, empty response, retry/backoff | Medium |
 | Orchestration | Trigger pipeline success/failure, cancellation on rapid re-trigger | High |
-| Accessibility Flow | Permission denied/granted/revoked, focused field read/write failure fallback | High |
+| Accessibility Flow | Permission denied/granted/revoked, focused field read/write failure fallback | Medium |
 | Performance | Local normalization budget and end-to-end latency budget checks | Medium |
 
 ## Last Updated
@@ -70,4 +84,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (4 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (22 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (32 tests)
