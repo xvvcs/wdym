@@ -1,47 +1,71 @@
-# Prompt Refactor for Dictation
+# wdym
 
-Swift-based macOS project for refactoring raw dictation text into clearer AI-ready prompts.
+Wdym ("What do you mean") is a macOS menu bar app that refines rough dictation or messy text into clear, useful prompts in seconds.
 
-## Current Status
+## What it is for
 
-- Implementation plan is documented in `IMPLEMENTATION_PLAN.md`.
-- Core TDD scaffolding is in place as a Swift package.
-- Menu bar preview app is available in `PromptRefactorApp/PromptRefactorApp.xcodeproj`.
-- Groq integration is implemented with key input in the Options window.
-- Terminal-first command pipeline is enabled by default (`Cmd+A` -> `Cmd+C` -> refactor -> `Cmd+V`) with focused-field AX fallback.
-- Kitty deterministic mode is available: when enabled, Kitty/OpenCode capture requires Kitty Remote Control (`kitten @`) and does not silently fall back.
+- Improving prompt quality before sending to your coding assistant or AI tool.
+- Speeding up editing flow with a global shortcut from any app.
+- Keeping your workflow lightweight: no heavy UI, no extra app windows while you work.
 
-## Kitty/OpenCode Setup (Deterministic)
+## Highlights
 
-Add this to your Kitty config and restart Kitty:
+- Menu bar first experience with quick status and controls.
+- Output modes for replace, copy, or both.
+- Prompt style presets for general and coding use.
+- Custom global shortcut support, including user-recorded key combinations.
+- Terminal-aware capture with Kitty/OpenCode support.
+
+## Privacy
+
+- No prompt history is stored.
+- No analytics or tracking are included.
+- Prompt text is handled in memory and discarded after processing.
+- With Groq disabled, processing stays local.
+- With Groq enabled, only the current prompt text is sent to Groq over HTTPS.
+- API keys remain local in macOS Keychain, and app preferences remain local in UserDefaults.
+
+## Download
+
+Download the latest release from the GitHub **Releases** page:
+
+- `wdym-<version>-unsigned.dmg` (recommended)
+- `wdym-<version>-unsigned.zip` (fallback)
+
+Move `wdym.app` to `/Applications` and launch.
+
+Because free releases are unsigned, macOS may block first launch:
+
+1. Right-click `wdym.app` and choose **Open**.
+2. If needed, go to **System Settings -> Privacy & Security -> Open Anyway**.
+
+Terminal fallback if required:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/wdym.app
+```
+
+## Quick Start
+
+1. Launch `wdym` from the menu bar.
+2. Open **Options** and grant Accessibility permission.
+3. Choose output mode, prompt style, and shortcut.
+4. Place cursor in a text field (or select text) and press your shortcut.
+5. `wdym` refines and applies output using your chosen mode.
+
+## Kitty/OpenCode (optional)
+
+If you use Kitty/OpenCode and want deterministic capture, add this to Kitty config:
 
 ```text
 allow_remote_control socket-only
 listen_on unix:/tmp/prompt-refactor-kitty
 ```
 
-Then set the same listen address in Prompt Refactor Options.
+Then set the same address in `wdym` Options.
 
-Note: Kitty appends a PID suffix to UNIX socket paths (for example `/tmp/prompt-refactor-kitty-73492`). If you set the base path (`unix:/tmp/prompt-refactor-kitty`) in Prompt Refactor, the app auto-detects active PID-suffixed sockets and the Options check shows the resolved address.
+## For contributors
 
-When running full-screen terminal apps (like OpenCode) where selection can be empty, Prompt Refactor falls back to focused screen text using Kitty cursor metadata (`--add-cursor`) and extracts only cursor-anchored prompt input. It ignores composer metadata rows (mode/model/variant) and transcript lines; if prompt input cannot be detected confidently, it returns empty instead of using the full screen transcript.
-
-## Decisions Locked
-
-- License: MIT
-- Default behavior: Replace + Copy
-- Provider strategy: Groq speed-first configuration
-
-## Reference
-
-- FreeFlow open-source speech-to-text project is used as a reference point for low-latency Groq integration patterns.
-
-## Run Tests
-
-```bash
-swift test
-```
-
-```bash
-xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test
-```
+- Core package tests: `swift test`
+- App tests: `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test`
+- Free release workflow: `.github/workflows/release-and-publish.yml`

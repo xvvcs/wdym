@@ -1,0 +1,101 @@
+name: Release wdym
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    env:
+      INTERNAL_APP_NAME: PromptRefactorApp
+      RELEASE_APP_NAME: wdym
+      SCHEME: PromptRefactorApp
+      PROJECT_PATH: PromptRefactorApp/PromptRefactorApp.xcodeproj
+      CONFIGURATION: Release
+      DERIVED_DATA: build/DerivedData
+      ARTIFACTS_DIR: build/artifacts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build unsigned app
+        run: |
+          set -euo pipefail
+
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package DMG and ZIP
+        run: |
+          set -euo pipefail
+
+          VERSION="${GITHUB_REF_NAME}"
+          APP_PATH="$DERIVED_DATA/Build/Products/$CONFIGURATION/$INTERNAL_APP_NAME.app"
+          STAGING_DIR="build/dmg-root"
+          RELEASE_APP_PATH="$STAGING_DIR/$RELEASE_APP_NAME.app"
+          DMG_PATH="$ARTIFACTS_DIR/$RELEASE_APP_NAME-$VERSION-unsigned.dmg"
+          ZIP_PATH="$ARTIFACTS_DIR/$RELEASE_APP_NAME-$VERSION-unsigned.zip"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "App bundle not found at: $APP_PATH"
+            exit 1
+          fi
+
+          mkdir -p "$ARTIFACTS_DIR"
+          rm -rf "$STAGING_DIR"
+          mkdir -p "$STAGING_DIR"
+
+          cp -R "$APP_PATH" "$RELEASE_APP_PATH"
+
+          ditto -c -k --sequesterRsrc --keepParent "$RELEASE_APP_PATH" "$ZIP_PATH"
+
+          hdiutil create \
+            -volname "$RELEASE_APP_NAME" \
+            -srcfolder "$STAGING_DIR" \
+            -ov \
+            -format UDZO \
+            "$DMG_PATH"
+
+          shasum -a 256 "$DMG_PATH" "$ZIP_PATH" > "$ARTIFACTS_DIR/SHA256SUMS.txt"
+
+      - name: Write release notes
+        run: |
+          cat > "$ARTIFACTS_DIR/RELEASE_NOTES.md" <<'EOF'
+          ## Unsigned macOS build
+
+          This release is built without Apple paid signing/notarization.
+
+          If macOS blocks first launch:
+          1. Move the app to `/Applications`.
+          2. Right-click the app and choose **Open**.
+          3. If needed, go to **System Settings -> Privacy & Security -> Open Anyway**.
+
+          Optional terminal fallback:
+
+          ```bash
+          xattr -dr com.apple.quarantine /Applications/wdym.app
+          ```
+          EOF
+
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: build/artifacts/RELEASE_NOTES.md
+          files: |
+            build/artifacts/*.dmg
+            build/artifacts/*.zip
+            build/artifacts/SHA256SUMS.txt
