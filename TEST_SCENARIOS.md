@@ -69,6 +69,9 @@ Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 | APP-048 | `storePublishesUpdatedSettingsImmediately` | User updates a settings control in Options | Store publishes state updates immediately so controls reflect changes without repeated interaction | Done |
 | APP-049 | `storePublishesForEveryDistinctSettingChange` | User changes multiple options in one session | Store publishes each distinct change so toggles and dependent controls stay in sync | Done |
 | APP-050 | `storeDoesNotPublishWhenValueDoesNotChange` | User clicks an option that resolves to the same value | Store avoids redundant publishes and unnecessary UI churn | Done |
+| APP-051 | `runtimeUpdatesHotkeyBindingWhenCustomShortcutChanges` | User enables custom shortcut and records a new key combo | Runtime updates active global hotkey binding without restart | Done |
+| APP-052 | `hotkeyBindingCaptureRejectsEventsWithoutModifiers` | User presses a key without modifiers while recording custom shortcut | Recorder guard rejects invalid bare-key shortcut capture | Done |
+| APP-053 | `hotkeyBindingTitleFormatsCapturedShortcut` | Custom shortcut binding is displayed in options feedback text | Shortcut title rendering shows normalized modifier + key format | Done |
 
 Source files:
 - `PromptRefactorApp/PromptRefactorAppTests/PromptRefactorAppTests.swift`
@@ -104,4 +107,4 @@ Source files:
 - Date: 2026-03-04
 - Command baseline:
   - `swift test` passing (4 tests)
-  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (50 tests)
+  - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (53 tests)

@@ -30,6 +30,18 @@ struct HotkeyServiceTests {
         #expect(!binding.matches(event))
     }
 
+    @Test func hotkeyBindingCaptureRejectsEventsWithoutModifiers() {
+        let event = makeKeyDownEvent(keyCode: 15, modifiers: [])
+
+        #expect(HotkeyBinding.capture(from: event) == nil)
+    }
+
+    @Test func hotkeyBindingTitleFormatsCapturedShortcut() {
+        let binding = HotkeyBinding(keyCode: 15, modifiers: [.command, .shift])
+
+        #expect(binding.title == "Cmd+Shift+R")
+    }
+
     private func makeKeyDownEvent(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> NSEvent {
         NSEvent.keyEvent(
             with: .keyDown,

@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import PromptRefactorCore
 import SwiftUI
 
@@ -108,6 +109,7 @@ private struct MenuBarContent: View {
 private struct OptionsView: View {
   @ObservedObject var runtime: AppRuntimeController
   @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
+  @StateObject private var shortcutRecorder = ShortcutRecorder()
 
   var body: some View {
     ScrollView {
@@ -151,14 +153,37 @@ private struct OptionsView: View {
           }
 
           settingRow(label: "Shortcut") {
-            Picker("Shortcut", selection: shortcutPresetBinding) {
-              ForEach(ShortcutPreset.allCases) { preset in
-                Text(preset.title).tag(preset.rawValue)
+            VStack(alignment: .trailing, spacing: 8) {
+              Picker("Shortcut", selection: shortcutPresetBinding) {
+                ForEach(ShortcutPreset.allCases) { preset in
+                  Text(preset.title).tag(preset.rawValue)
+                }
+              }
+              .disabled(settingsStore.settings.useCustomShortcut)
+              .accessibilityIdentifier("options.picker.shortcut")
+              .labelsHidden()
+              .pickerStyle(.menu)
+
+              Toggle("Use custom shortcut", isOn: useCustomShortcutBinding)
+                .accessibilityIdentifier("options.toggle.useCustomShortcut")
+                .toggleStyle(.switch)
+
+              Text("Active: \(settingsStore.settings.activeShortcutBinding.title)")
+                .font(.caption)
+                .foregroundStyle(Color.white.opacity(0.72))
+
+              if settingsStore.settings.useCustomShortcut {
+                Button(shortcutRecorder.isRecording ? "Stop Recording" : "Record Shortcut") {
+                  toggleShortcutRecording()
+                }
+                .accessibilityIdentifier("options.button.recordShortcut")
+                .buttonStyle(OutlineActionButtonStyle())
+
+                Text(shortcutRecorder.statusMessage)
+                  .font(.caption)
+                  .foregroundStyle(Color.white.opacity(0.62))
               }
             }
-            .accessibilityIdentifier("options.picker.shortcut")
-            .labelsHidden()
-            .pickerStyle(.menu)
             .frame(maxWidth: 260)
           }
 
@@ -292,6 +317,9 @@ private struct OptionsView: View {
       )
       .ignoresSafeArea()
     )
+    .onDisappear {
+      shortcutRecorder.stopRecording()
+    }
   }
 
   private func settingsCard<Content: View>(
@@ -365,6 +393,13 @@ private struct OptionsView: View {
     )
   }
 
+  private var useCustomShortcutBinding: Binding<Bool> {
+    Binding(
+      get: { settingsStore.settings.useCustomShortcut },
+      set: { settingsStore.updateUseCustomShortcut($0) }
+    )
+  }
+
   private var includeClarifyingQuestionsBinding: Binding<Bool> {
     Binding(
       get: { settingsStore.settings.includeClarifyingQuestions },
@@ -405,6 +440,72 @@ private struct OptionsView: View {
       get: { settingsStore.settings.kittyListenAddress },
       set: { settingsStore.updateKittyListenAddress($0) }
     )
+  }
+
+  private func toggleShortcutRecording() {
+    if shortcutRecorder.isRecording {
+      shortcutRecorder.stopRecording()
+      return
+    }
+
+    shortcutRecorder.startRecording { binding in
+      settingsStore.updateCustomShortcut(binding)
+      settingsStore.updateUseCustomShortcut(true)
+    }
+  }
+}
+
+@MainActor
+private final class ShortcutRecorder: ObservableObject {
+  @Published private(set) var isRecording = false
+  @Published private(set) var statusMessage = "Press Record Shortcut"
+
+  private var monitor: Any?
+
+  func startRecording(onCapture: @escaping (HotkeyBinding) -> Void) {
+    stopRecording()
+    isRecording = true
+    statusMessage = "Press any key combo (Esc to cancel)"
+
+    monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      guard let self else {
+        return event
+      }
+
+      guard self.isRecording else {
+        return event
+      }
+
+      if event.keyCode == 53 {
+        self.stopRecording(message: "Recording cancelled")
+        return nil
+      }
+
+      guard let binding = HotkeyBinding.capture(from: event) else {
+        self.statusMessage = "Include Command, Shift, Option, or Control"
+        return nil
+      }
+
+      onCapture(binding)
+      self.stopRecording(message: "Captured \(binding.title)")
+      return nil
+    }
+  }
+
+  func stopRecording(message: String = "Press Record Shortcut") {
+    if let monitor {
+      NSEvent.removeMonitor(monitor)
+      self.monitor = nil
+    }
+
+    isRecording = false
+    statusMessage = message
+  }
+
+  deinit {
+    if let monitor {
+      NSEvent.removeMonitor(monitor)
+    }
   }
 }
 

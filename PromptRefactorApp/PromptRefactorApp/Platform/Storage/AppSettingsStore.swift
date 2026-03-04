@@ -13,6 +13,9 @@ struct AppSettings: Equatable {
   var useGroqRefinement: Bool
   var groqModelRawValue: String
   var shortcutPresetRawValue: String
+  var useCustomShortcut: Bool
+  var customShortcutKeyCode: UInt16
+  var customShortcutModifiersRawValue: UInt
 
   static let `default` = AppSettings(
     outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
@@ -24,11 +27,22 @@ struct AppSettings: Equatable {
     kittyListenAddress: "unix:/tmp/prompt-refactor-kitty",
     useGroqRefinement: false,
     groqModelRawValue: GroqModel.llama31_8bInstant.rawValue,
-    shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue
+    shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue,
+    useCustomShortcut: false,
+    customShortcutKeyCode: ShortcutPreset.commandShiftR.binding.keyCode,
+    customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue
   )
 
   var shortcutPreset: ShortcutPreset {
     ShortcutPreset.from(rawValue: shortcutPresetRawValue)
+  }
+
+  var customShortcutBinding: HotkeyBinding {
+    HotkeyBinding(keyCode: customShortcutKeyCode, modifiersRawValue: customShortcutModifiersRawValue)
+  }
+
+  var activeShortcutBinding: HotkeyBinding {
+    useCustomShortcut ? customShortcutBinding : shortcutPreset.binding
   }
 
   var refactorPreferences: AppRefactorPreferences {
@@ -106,6 +120,19 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     }
   }
 
+  func updateUseCustomShortcut(_ value: Bool) {
+    updateSettings {
+      $0.useCustomShortcut = value
+    }
+  }
+
+  func updateCustomShortcut(_ binding: HotkeyBinding) {
+    updateSettings {
+      $0.customShortcutKeyCode = binding.keyCode
+      $0.customShortcutModifiersRawValue = binding.modifiersRawValue
+    }
+  }
+
   func updateGroqModelRawValue(_ value: String) {
     updateSettings {
       $0.groqModelRawValue = value
@@ -134,6 +161,9 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(settings.useGroqRefinement, forKey: Keys.useGroqRefinement)
     userDefaults.set(settings.groqModelRawValue, forKey: Keys.groqModel)
     userDefaults.set(settings.shortcutPresetRawValue, forKey: Keys.shortcutPreset)
+    userDefaults.set(settings.useCustomShortcut, forKey: Keys.useCustomShortcut)
+    userDefaults.set(Int(settings.customShortcutKeyCode), forKey: Keys.customShortcutKeyCode)
+    userDefaults.set(settings.customShortcutModifiersRawValue, forKey: Keys.customShortcutModifiers)
   }
 
   private static func load(from userDefaults: UserDefaults) -> AppSettings {
@@ -179,6 +209,21 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     let shortcutPreset =
       userDefaults.string(forKey: Keys.shortcutPreset) ?? AppSettings.default.shortcutPresetRawValue
 
+    let useCustomShortcut =
+      userDefaults.object(forKey: Keys.useCustomShortcut) == nil
+      ? AppSettings.default.useCustomShortcut
+      : userDefaults.bool(forKey: Keys.useCustomShortcut)
+
+    let customShortcutKeyCode =
+      userDefaults.object(forKey: Keys.customShortcutKeyCode) == nil
+      ? AppSettings.default.customShortcutKeyCode
+      : UInt16(clamping: userDefaults.integer(forKey: Keys.customShortcutKeyCode))
+
+    let customShortcutModifiersRawValue =
+      userDefaults.object(forKey: Keys.customShortcutModifiers) == nil
+      ? AppSettings.default.customShortcutModifiersRawValue
+      : UInt(userDefaults.integer(forKey: Keys.customShortcutModifiers))
+
     return AppSettings(
       outputModeRawValue: outputMode,
       promptStyleRawValue: promptStyle,
@@ -189,7 +234,10 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       kittyListenAddress: kittyListenAddress,
       useGroqRefinement: useGroqRefinement,
       groqModelRawValue: groqModel,
-      shortcutPresetRawValue: shortcutPreset
+      shortcutPresetRawValue: shortcutPreset,
+      useCustomShortcut: useCustomShortcut,
+      customShortcutKeyCode: customShortcutKeyCode,
+      customShortcutModifiersRawValue: customShortcutModifiersRawValue
     )
   }
 }
@@ -205,4 +253,7 @@ private enum Keys {
   static let useGroqRefinement = "useGroqRefinement"
   static let groqModel = "groqModel"
   static let shortcutPreset = "shortcutPreset"
+  static let useCustomShortcut = "useCustomShortcut"
+  static let customShortcutKeyCode = "customShortcutKeyCode"
+  static let customShortcutModifiers = "customShortcutModifiers"
 }

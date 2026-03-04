@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import PromptRefactorCore
 import Testing
@@ -300,9 +301,23 @@ struct AppRuntimeControllerTests {
         #expect(runtime.status == "Accessibility already enabled")
     }
 
+    @Test func runtimeUpdatesHotkeyBindingWhenCustomShortcutChanges() {
+        let hotkey = StubHotkeyService()
+        let runtime = makeRuntime(initialAPIKey: nil, hotkey: hotkey)
+
+        #expect(hotkey.startListeningCalls == 1)
+        #expect(hotkey.startedBinding == ShortcutPreset.commandShiftR.binding)
+
+        runtime.settingsStore.updateUseCustomShortcut(true)
+        runtime.settingsStore.updateCustomShortcut(HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+
+        #expect(hotkey.updatedBindings.last == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+    }
+
     private func makeRuntime(
         initialAPIKey: String?,
         keychain: InMemoryKeychainStore? = nil,
+        hotkey: StubHotkeyService? = nil,
         clipboard: StubClipboardService = StubClipboardService(initialRead: nil),
         textCommands: StubTextCommandService = StubTextCommandService(),
         kittyRemoteControl: StubKittyRemoteControlService = StubKittyRemoteControlService(),
@@ -318,10 +333,12 @@ struct AppRuntimeControllerTests {
             keychainStore.apiKey = initialAPIKey
         }
 
+        let hotkeyService = hotkey ?? StubHotkeyService()
+
         return AppRuntimeController(
             settingsStore: settingsStore,
             refactorService: PromptRefactorService(),
-            hotkeyService: StubHotkeyService(),
+            hotkeyService: hotkeyService,
             clipboardService: clipboard,
             textCommandService: textCommands,
             kittyRemoteControlService: kittyRemoteControl,
@@ -389,8 +406,19 @@ private final class StubKittyRemoteControlService: KittyRemoteControlService {
 }
 
 private final class StubHotkeyService: HotkeyService {
-    func startListening(binding: HotkeyBinding, handler: @escaping () -> Void) {}
-    func updateBinding(_ binding: HotkeyBinding) {}
+    private(set) var startListeningCalls = 0
+    private(set) var startedBinding: HotkeyBinding?
+    private(set) var updatedBindings: [HotkeyBinding] = []
+
+    func startListening(binding: HotkeyBinding, handler: @escaping () -> Void) {
+        startListeningCalls += 1
+        startedBinding = binding
+    }
+
+    func updateBinding(_ binding: HotkeyBinding) {
+        updatedBindings.append(binding)
+    }
+
     func stopListening() {}
 }
 

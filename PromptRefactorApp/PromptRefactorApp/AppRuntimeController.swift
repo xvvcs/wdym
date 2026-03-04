@@ -473,7 +473,7 @@ final class AppRuntimeController: ObservableObject {
     }
 
     private func configureHotkey() {
-        hotkeyService.startListening(binding: settingsStore.settings.shortcutPreset.binding) { [weak self] in
+        hotkeyService.startListening(binding: settingsStore.settings.activeShortcutBinding) { [weak self] in
             Task { @MainActor in
                 self?.refactorNow()
             }
@@ -482,11 +482,10 @@ final class AppRuntimeController: ObservableObject {
 
     private func observeShortcutChanges() {
         settingsStore.$settings
-            .map(\.shortcutPresetRawValue)
+            .map(\.activeShortcutBinding)
             .removeDuplicates()
-            .sink { [weak self] rawValue in
-                let preset = ShortcutPreset.from(rawValue: rawValue)
-                self?.hotkeyService.updateBinding(preset.binding)
+            .sink { [weak self] binding in
+                self?.hotkeyService.updateBinding(binding)
             }
             .store(in: &cancellables)
     }

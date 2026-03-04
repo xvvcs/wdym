@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import Testing
@@ -30,6 +31,8 @@ struct AppSettingsStoreTests {
     store.updateUseGroqRefinement(true)
     store.updateGroqModelRawValue(GroqModel.llama33_70bVersatile.rawValue)
     store.updateShortcutPresetRawValue(ShortcutPreset.commandOptionR.rawValue)
+    store.updateUseCustomShortcut(true)
+    store.updateCustomShortcut(HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
 
     let reloaded = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
 
@@ -43,6 +46,9 @@ struct AppSettingsStoreTests {
     #expect(reloaded.settings.useGroqRefinement)
     #expect(reloaded.settings.groqModelRawValue == GroqModel.llama33_70bVersatile.rawValue)
     #expect(reloaded.settings.shortcutPresetRawValue == ShortcutPreset.commandOptionR.rawValue)
+    #expect(reloaded.settings.useCustomShortcut)
+    #expect(reloaded.settings.customShortcutBinding == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+    #expect(reloaded.settings.activeShortcutBinding == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
   }
 
   @Test func settingsShortcutPresetFallsBackWhenPersistedValueIsInvalid() {
@@ -65,6 +71,8 @@ struct AppSettingsStoreTests {
     #expect(store.settings.autoSelectAllOnTrigger)
     #expect(store.settings.kittyRemoteControlRequired)
     #expect(store.settings.kittyListenAddress == "unix:/tmp/prompt-refactor-kitty")
+    #expect(!store.settings.useCustomShortcut)
+    #expect(store.settings.activeShortcutBinding == ShortcutPreset.commandShiftR.binding)
   }
 
   @Test func storePublishesUpdatedSettingsImmediately() {
