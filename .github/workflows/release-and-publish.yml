@@ -43,12 +43,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${GITHUB_REF_NAME}"
           APP_PATH="$DERIVED_DATA/Build/Products/$CONFIGURATION/$INTERNAL_APP_NAME.app"
           STAGING_DIR="build/dmg-root"
           RELEASE_APP_PATH="$STAGING_DIR/$RELEASE_APP_NAME.app"
-          DMG_PATH="$ARTIFACTS_DIR/$RELEASE_APP_NAME-$VERSION-unsigned.dmg"
-          ZIP_PATH="$ARTIFACTS_DIR/$RELEASE_APP_NAME-$VERSION-unsigned.zip"
+          DMG_PATH="$ARTIFACTS_DIR/${RELEASE_APP_NAME}_installer.dmg"
+          ZIP_PATH="$ARTIFACTS_DIR/${RELEASE_APP_NAME}_installer.zip"
 
           if [ ! -d "$APP_PATH" ]; then
             echo "App bundle not found at: $APP_PATH"
@@ -73,22 +72,29 @@ jobs:
           shasum -a 256 "$DMG_PATH" "$ZIP_PATH" > "$ARTIFACTS_DIR/SHA256SUMS.txt"
 
       - name: Write release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          cat > "$ARTIFACTS_DIR/RELEASE_NOTES.md" <<'EOF'
-          ## Unsigned macOS build
+          set -euo pipefail
 
-          This release is built without Apple paid signing/notarization.
+          REPO="${GITHUB_REPOSITORY}"
+          TAG="${GITHUB_REF_NAME}"
+          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
-          If macOS blocks first launch:
-          1. Move the app to `/Applications`.
-          2. Right-click the app and choose **Open**.
-          3. If needed, go to **System Settings -> Privacy & Security -> Open Anyway**.
+          GENERATED=$(gh api "repos/${REPO}/releases/generate-notes" \
+            --method POST \
+            -f tag_name="${TAG}" \
+            --jq '.body')
 
-          Optional terminal fallback:
+          cat > "$ARTIFACTS_DIR/RELEASE_NOTES.md" <<EOF
+          ${GENERATED}
 
-          ```bash
-          xattr -dr com.apple.quarantine /Applications/wdym.app
-          ```
+          ---
+
+          ## Download
+
+          - [${RELEASE_APP_NAME}_installer.dmg](${BASE_URL}/${RELEASE_APP_NAME}_installer.dmg) — macOS disk image
+          - [${RELEASE_APP_NAME}_installer.zip](${BASE_URL}/${RELEASE_APP_NAME}_installer.zip) — ZIP archive
           EOF
 
       - name: Create GitHub release and upload assets
