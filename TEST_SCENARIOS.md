@@ -12,6 +12,9 @@ Compact tracker for implemented and planned tests.
 | PRS-002 | `normalizeDictationAddsTerminalPunctuationIfMissing` | Input has no ending punctuation | Sentence finalization (`.`) and capitalization | Done |
 | PRS-003 | `buildPromptReturnsEmptyStringForEmptyInput` | Input is empty/whitespace | Empty-input guard path in prompt builder | Done |
 | PRS-004 | `buildPromptIncludesCodingSpecificInstructions` | Style preset is `.coding` | Style-specific instructions + normalized task inclusion | Done |
+| PRS-005 | `buildPromptUsesCustomTemplateWithTaskSubstitution` | `customTemplate` is provided with `{{task}}` placeholder | Custom template replaces default; `{{task}}` is substituted with normalized input | Done |
+| PRS-006 | `buildPromptUsesDefaultTemplateWhenCustomTemplateIsNil` | `customTemplate` is `nil` | Default template structure (`Task:` / `Output requirements:`) is used | Done |
+| PRS-007 | `buildPromptReturnsCustomTemplateUnchangedWhenTaskPlaceholderAbsent` | `customTemplate` has no `{{task}}` placeholder | Template is returned as-is without appending the task | Done |
 
 Source file: `Tests/PromptRefactorCoreTests/PromptRefactorServiceTests.swift`
 
@@ -106,5 +109,5 @@ Source files:
 
 - Date: 2026-03-04
 - Command baseline:
-  - `swift test` passing (4 tests)
+  - `swift test` passing (7 tests)
   - `xcodebuild -project "PromptRefactorApp/PromptRefactorApp.xcodeproj" -scheme "PromptRefactorApp" -destination "platform=macOS" -only-testing:PromptRefactorAppTests test` passing (53 tests)

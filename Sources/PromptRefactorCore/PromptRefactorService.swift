@@ -9,6 +9,10 @@ public struct PromptRefactorService: Sendable {
             return ""
         }
 
+        if let template = options.customTemplate {
+            return template.replacingOccurrences(of: "{{task}}", with: normalizedText)
+        }
+
         var lines: [String] = [
             "Task:",
             normalizedText,

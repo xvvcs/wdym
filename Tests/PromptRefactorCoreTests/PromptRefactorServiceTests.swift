@@ -40,3 +40,36 @@ import Testing
     #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
     #expect(result.contains("If critical details are missing, end with up to 2 clarifying questions."))
 }
+
+@Test func buildPromptUsesCustomTemplateWithTaskSubstitution() {
+    let service = PromptRefactorService()
+    let template = "Please refactor the following:\n{{task}}\nBe concise."
+    let result = service.buildPrompt(
+        from: "um explain how recursion works",
+        options: RefactorBuildOptions(customTemplate: template)
+    )
+
+    #expect(result == "Please refactor the following:\nExplain how recursion works.\nBe concise.")
+}
+
+@Test func buildPromptUsesDefaultTemplateWhenCustomTemplateIsNil() {
+    let service = PromptRefactorService()
+    let result = service.buildPrompt(
+        from: "explain how recursion works",
+        options: RefactorBuildOptions(customTemplate: nil)
+    )
+
+    #expect(result.contains("Task:"))
+    #expect(result.contains("Output requirements:"))
+}
+
+@Test func buildPromptReturnsCustomTemplateUnchangedWhenTaskPlaceholderAbsent() {
+    let service = PromptRefactorService()
+    let template = "Static prompt with no placeholder."
+    let result = service.buildPrompt(
+        from: "um explain how recursion works",
+        options: RefactorBuildOptions(customTemplate: template)
+    )
+
+    #expect(result == "Static prompt with no placeholder.")
+}
