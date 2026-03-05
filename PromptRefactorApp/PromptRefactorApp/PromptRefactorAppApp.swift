@@ -20,13 +20,14 @@ struct PromptRefactorAppApp: App {
       MenuBarContent(
         status: $runtime.status,
         refactorNow: runtime.refactorNow,
-        setupCompleted: $setupCompleted
+        setupCompleted: $setupCompleted,
+        updateChecker: runtime.updateChecker
       )
     }
     .menuBarExtraStyle(.window)
 
     WindowGroup("Options", id: "options") {
-      OptionsView(runtime: runtime, settingsStore: runtime.settingsStore)
+      OptionsView(runtime: runtime, settingsStore: runtime.settingsStore, updateChecker: runtime.updateChecker)
         .frame(minWidth: 520, minHeight: 460)
     }
 
@@ -45,6 +46,7 @@ private struct MenuBarContent: View {
   @Binding var status: String
   let refactorNow: () -> Void
   @Binding var setupCompleted: Bool
+  @ObservedObject var updateChecker: UpdateChecker
 
   @Environment(\.openWindow) private var openWindow
   @Environment(\.dismiss) private var dismiss
@@ -92,6 +94,10 @@ private struct MenuBarContent: View {
         openWindow(id: "options")
       }
       .buttonStyle(OutlineActionButtonStyle())
+
+      if let release = updateChecker.availableRelease {
+        UpdateBannerView(release: release, updateChecker: updateChecker)
+      }
 
       Divider()
         .overlay(Color.white.opacity(0.18))
@@ -152,6 +158,7 @@ private struct MenuBarContent: View {
 private struct OptionsView: View {
   @ObservedObject var runtime: AppRuntimeController
   @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
+  @ObservedObject var updateChecker: UpdateChecker
   @StateObject private var shortcutRecorder = ShortcutRecorder()
 
   var body: some View {
@@ -348,6 +355,42 @@ private struct OptionsView: View {
             .buttonStyle(OutlineActionButtonStyle())
           }
         }
+
+        settingsCard(title: "Updates", subtitle: "Keep wdym up to date") {
+          Toggle("Automatically check for updates", isOn: checkForUpdatesBinding)
+            .accessibilityIdentifier("options.toggle.checkForUpdates")
+            .toggleStyle(.switch)
+
+          Divider()
+
+          if let release = updateChecker.availableRelease {
+            UpdateBannerView(release: release, updateChecker: updateChecker)
+          } else if updateChecker.isChecking {
+            HStack(spacing: 6) {
+              ProgressView()
+                .scaleEffect(0.7)
+              Text("Checking for updates...")
+                .font(.caption)
+                .foregroundStyle(Color.white.opacity(0.72))
+            }
+          } else if let error = updateChecker.lastCheckError {
+            Text(error)
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.62))
+              .lineLimit(2)
+          } else {
+            Text("wdym is up to date.")
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.62))
+          }
+
+          Button(updateChecker.isChecking ? "Checking..." : "Check Now") {
+            runtime.checkForUpdatesNow()
+          }
+          .buttonStyle(OutlineActionButtonStyle())
+          .disabled(updateChecker.isChecking)
+          .accessibilityIdentifier("options.button.checkForUpdates")
+        }
       }
       .padding(20)
       .frame(maxWidth: 760, alignment: .leading)
@@ -495,6 +538,13 @@ private struct OptionsView: View {
     )
   }
 
+  private var checkForUpdatesBinding: Binding<Bool> {
+    Binding(
+      get: { settingsStore.settings.checkForUpdatesEnabled },
+      set: { settingsStore.updateCheckForUpdatesEnabled($0) }
+    )
+  }
+
   private func toggleShortcutRecording() {
     if shortcutRecorder.isRecording {
       shortcutRecorder.stopRecording()
@@ -505,6 +555,62 @@ private struct OptionsView: View {
       settingsStore.updateCustomShortcut(binding)
       settingsStore.updateUseCustomShortcut(true)
     }
+  }
+}
+
+// MARK: - Update banner
+
+private struct UpdateBannerView: View {
+  let release: GitHubRelease
+  @ObservedObject var updateChecker: UpdateChecker
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 6) {
+        Image(systemName: "arrow.down.circle.fill")
+          .foregroundStyle(.green)
+          .font(.subheadline)
+
+        Text("Update available: \(release.tagName)")
+          .font(.subheadline)
+          .fontWeight(.medium)
+          .foregroundStyle(.white)
+          .lineLimit(1)
+
+        Spacer()
+
+        Button {
+          updateChecker.skipVersion(release.tagName)
+        } label: {
+          Image(systemName: "xmark")
+            .font(.caption)
+            .foregroundStyle(Color.white.opacity(0.5))
+        }
+        .buttonStyle(.plain)
+        .help("Dismiss this update")
+      }
+
+      Text(
+        "Because wdym is unsigned, updating requires downloading the new release and replacing the app manually. Your settings and API key are stored separately and will not be affected."
+      )
+      .font(.caption)
+      .foregroundStyle(Color.white.opacity(0.65))
+      .fixedSize(horizontal: false, vertical: true)
+
+      Button("View release notes") {
+        NSWorkspace.shared.open(release.htmlUrl)
+      }
+      .buttonStyle(OutlineActionButtonStyle())
+    }
+    .padding(10)
+    .background(
+      RoundedRectangle(cornerRadius: 10)
+        .fill(Color.green.opacity(0.12))
+        .overlay(
+          RoundedRectangle(cornerRadius: 10)
+            .stroke(Color.green.opacity(0.35), lineWidth: 1)
+        )
+    )
   }
 }
 

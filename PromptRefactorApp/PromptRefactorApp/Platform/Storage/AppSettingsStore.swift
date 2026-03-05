@@ -19,6 +19,7 @@ struct AppSettings: Equatable {
   var autoRefactorOnPaste: Bool
   var pasteMonitorAllowedBundleIDs: [String]
   var soundCuesEnabled: Bool
+  var checkForUpdatesEnabled: Bool
 
   static let `default` = AppSettings(
     outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
@@ -36,7 +37,8 @@ struct AppSettings: Equatable {
     customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue,
     autoRefactorOnPaste: false,
     pasteMonitorAllowedBundleIDs: [],
-    soundCuesEnabled: true
+    soundCuesEnabled: true,
+    checkForUpdatesEnabled: true
   )
 
   var shortcutPreset: ShortcutPreset {
@@ -166,6 +168,10 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     updateSettings { $0.soundCuesEnabled = value }
   }
 
+  func updateCheckForUpdatesEnabled(_ value: Bool) {
+    updateSettings { $0.checkForUpdatesEnabled = value }
+  }
+
   private func updateSettings(_ mutation: (inout AppSettings) -> Void) {
     var updated = settings
     mutation(&updated)
@@ -194,6 +200,7 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(settings.autoRefactorOnPaste, forKey: Keys.autoRefactorOnPaste)
     userDefaults.set(settings.pasteMonitorAllowedBundleIDs, forKey: Keys.pasteMonitorAllowedBundleIDs)
     userDefaults.set(settings.soundCuesEnabled, forKey: Keys.soundCuesEnabled)
+    userDefaults.set(settings.checkForUpdatesEnabled, forKey: Keys.checkForUpdatesEnabled)
   }
 
   private static func load(from userDefaults: UserDefaults) -> AppSettings {
@@ -268,6 +275,11 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       ? AppSettings.default.soundCuesEnabled
       : userDefaults.bool(forKey: Keys.soundCuesEnabled)
 
+    let checkForUpdatesEnabled =
+      userDefaults.object(forKey: Keys.checkForUpdatesEnabled) == nil
+      ? AppSettings.default.checkForUpdatesEnabled
+      : userDefaults.bool(forKey: Keys.checkForUpdatesEnabled)
+
     return AppSettings(
       outputModeRawValue: outputMode,
       promptStyleRawValue: promptStyle,
@@ -284,7 +296,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       customShortcutModifiersRawValue: customShortcutModifiersRawValue,
       autoRefactorOnPaste: autoRefactorOnPaste,
       pasteMonitorAllowedBundleIDs: pasteMonitorAllowedBundleIDs,
-      soundCuesEnabled: soundCuesEnabled
+      soundCuesEnabled: soundCuesEnabled,
+      checkForUpdatesEnabled: checkForUpdatesEnabled
     )
   }
 }
@@ -306,4 +319,5 @@ private enum Keys {
   static let autoRefactorOnPaste = "autoRefactorOnPaste"
   static let pasteMonitorAllowedBundleIDs = "pasteMonitorAllowedBundleIDs"
   static let soundCuesEnabled = "soundCuesEnabled"
+  static let checkForUpdatesEnabled = "checkForUpdatesEnabled"
 }

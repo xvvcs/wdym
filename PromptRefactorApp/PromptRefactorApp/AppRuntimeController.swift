@@ -12,6 +12,7 @@ final class AppRuntimeController: ObservableObject {
   @Published var groqAPIKeyMessage = ""
 
   let settingsStore: UserDefaultsAppSettingsStore
+  let updateChecker: UpdateChecker
 
   private let refactorService: PromptRefactorService
   private let hotkeyService: any HotkeyService
@@ -32,6 +33,7 @@ final class AppRuntimeController: ObservableObject {
   init() {
     let store = UserDefaultsAppSettingsStore()
     self.settingsStore = store
+    self.updateChecker = UpdateChecker()
     self.refactorService = PromptRefactorService()
     self.hotkeyService = GlobalHotkeyService()
     self.clipboardService = PasteboardClipboardService()
@@ -53,6 +55,7 @@ final class AppRuntimeController: ObservableObject {
     refreshAccessibilityState()
     configurePasteMonitor()
     observePasteMonitorSetting()
+    startUpdateChecks()
   }
 
   init(
@@ -68,9 +71,11 @@ final class AppRuntimeController: ObservableObject {
     providerFactory: ProviderFactory,
     frontmostBundleIdentifierProvider: @escaping () -> String?,
     pasteMonitorService: (any PasteMonitorService)? = nil,
-    soundCueService: SoundCueService? = nil
+    soundCueService: SoundCueService? = nil,
+    updateChecker: UpdateChecker? = nil
   ) {
     self.settingsStore = settingsStore
+    self.updateChecker = updateChecker ?? UpdateChecker()
     self.refactorService = refactorService
     self.hotkeyService = hotkeyService
     self.clipboardService = clipboardService
@@ -92,6 +97,7 @@ final class AppRuntimeController: ObservableObject {
     refreshAccessibilityState()
     configurePasteMonitor()
     observePasteMonitorSetting()
+    startUpdateChecks()
   }
 
   func refactorNow() {
@@ -605,6 +611,36 @@ final class AppRuntimeController: ObservableObject {
     return patterns.contains { pattern in
       trimmed.range(of: pattern, options: .regularExpression) != nil
     }
+  }
+
+  // MARK: - Update checks
+
+  func checkForUpdatesNow() {
+    Task { [weak self] in
+      await self?.updateChecker.checkForUpdates(userInitiated: true)
+    }
+  }
+
+  private func startUpdateChecks() {
+    guard settingsStore.settings.checkForUpdatesEnabled else { return }
+    Task { [weak self] in
+      await self?.updateChecker.startPeriodicChecks()
+    }
+
+    settingsStore.$settings
+      .map(\.checkForUpdatesEnabled)
+      .removeDuplicates()
+      .dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] enabled in
+        guard let self else { return }
+        if enabled {
+          Task { await self.updateChecker.startPeriodicChecks() }
+        } else {
+          self.updateChecker.stopPeriodicChecks()
+        }
+      }
+      .store(in: &cancellables)
   }
 }
 
