@@ -107,7 +107,6 @@ private struct MenuBarContent: View {
 
         Button("Reset Setup") {
           setupCompleted = false
-          UserDefaults.standard.set(false, forKey: "setupCompleted")
           dismiss()
           openWindow(id: "setup")
         }

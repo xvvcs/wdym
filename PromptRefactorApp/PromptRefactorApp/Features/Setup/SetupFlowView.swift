@@ -240,8 +240,9 @@ private struct GroqStepView: View {
 
       VStack(spacing: 10) {
         Button("Save & Continue") {
-          runtime.saveGroqAPIKey()
-          onNext()
+          if runtime.saveGroqAPIKey() {
+            onNext()
+          }
         }
         .buttonStyle(FilledSetupButtonStyle())
         .disabled(runtime.groqAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
