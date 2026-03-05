@@ -24,21 +24,21 @@ struct GroqResponseMessage: Decodable {
 }
 
 enum GroqModel: String, CaseIterable, Identifiable {
-    case llama31_8bInstant = "llama-3.1-8b-instant"
-    case llama33_70bVersatile = "llama-3.3-70b-versatile"
+    case llama318bInstant = "llama-3.1-8b-instant"
+    case llama3370bVersatile = "llama-3.3-70b-versatile"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .llama31_8bInstant:
+        case .llama318bInstant:
             return "Llama 3.1 8B (Fast)"
-        case .llama33_70bVersatile:
+        case .llama3370bVersatile:
             return "Llama 3.3 70B (Balanced)"
         }
     }
 
     static func from(rawValue: String) -> GroqModel {
-        GroqModel(rawValue: rawValue) ?? .llama31_8bInstant
+        GroqModel(rawValue: rawValue) ?? .llama318bInstant
     }
 }

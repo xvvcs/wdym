@@ -49,7 +49,10 @@ struct GroqProvider: LLMProvider {
         }
 
         let decoded = try JSONDecoder().decode(GroqChatCompletionResponse.self, from: data)
-        guard let content = decoded.choices.first?.message.content?.trimmingCharacters(in: .whitespacesAndNewlines), !content.isEmpty else {
+        guard
+            let content = decoded.choices.first?.message.content?.trimmingCharacters(
+                in: .whitespacesAndNewlines), !content.isEmpty
+        else {
             throw GroqProviderError.emptyContent
         }
 

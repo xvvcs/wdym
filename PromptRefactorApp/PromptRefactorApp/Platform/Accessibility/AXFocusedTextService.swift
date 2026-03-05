@@ -1,5 +1,5 @@
-import ApplicationServices
 import AppKit
+import ApplicationServices
 import Foundation
 
 enum AXFocusedTextError: Error {
@@ -18,11 +18,15 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
         let element = try focusedElement()
 
         for candidate in candidateElements(startingAt: element) {
-            if let selectedText = try readStringAttribute(kAXSelectedTextAttribute as CFString, from: candidate), !selectedText.isEmpty {
+            if let selectedText = try readStringAttribute(
+                kAXSelectedTextAttribute as CFString, from: candidate), !selectedText.isEmpty
+            {
                 return selectedText
             }
 
-            if let value = try readStringAttribute(kAXValueAttribute as CFString, from: candidate), !value.isEmpty {
+            if let value = try readStringAttribute(kAXValueAttribute as CFString, from: candidate),
+                !value.isEmpty
+            {
                 return value
             }
         }
@@ -34,7 +38,9 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
         let element = try focusedElement()
 
         for candidate in candidateElements(startingAt: element) {
-            if let selectedText = try readStringAttribute(kAXSelectedTextAttribute as CFString, from: candidate), !selectedText.isEmpty {
+            if let selectedText = try readStringAttribute(
+                kAXSelectedTextAttribute as CFString, from: candidate), !selectedText.isEmpty
+            {
                 let replaceSelectionStatus = AXUIElementSetAttributeValue(
                     candidate,
                     kAXSelectedTextAttribute as CFString,
@@ -46,7 +52,8 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
                 }
             }
 
-            let status = AXUIElementSetAttributeValue(candidate, kAXValueAttribute as CFString, value as CFString)
+            let status = AXUIElementSetAttributeValue(
+                candidate, kAXValueAttribute as CFString, value as CFString)
             if status == .success {
                 return
             }
@@ -63,8 +70,10 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
         let system = AXUIElementCreateSystemWide()
         var focusedObject: CFTypeRef?
 
-        let status = AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focusedObject)
-        guard status == .success, let focusedObject, let element = asAXUIElement(focusedObject) else {
+        let status = AXUIElementCopyAttributeValue(
+            system, kAXFocusedUIElementAttribute as CFString, &focusedObject)
+        guard status == .success, let focusedObject, let element = asAXUIElement(focusedObject)
+        else {
             throw AXFocusedTextError.noFocusedElement
         }
 
@@ -75,21 +84,29 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
         let system = AXUIElementCreateSystemWide()
         var focusedApplication: CFTypeRef?
 
-        let appStatus = AXUIElementCopyAttributeValue(system, kAXFocusedApplicationAttribute as CFString, &focusedApplication)
-        guard appStatus == .success, let focusedApplication, let appElement = asAXUIElement(focusedApplication) else {
+        let appStatus = AXUIElementCopyAttributeValue(
+            system, kAXFocusedApplicationAttribute as CFString, &focusedApplication)
+        guard appStatus == .success, let focusedApplication,
+            let appElement = asAXUIElement(focusedApplication)
+        else {
             return nil
         }
 
         var focusedElement: CFTypeRef?
-        let elementStatus = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
-        guard elementStatus == .success, let focusedElement, let element = asAXUIElement(focusedElement) else {
+        let elementStatus = AXUIElementCopyAttributeValue(
+            appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        guard elementStatus == .success, let focusedElement,
+            let element = asAXUIElement(focusedElement)
+        else {
             return nil
         }
 
         return element
     }
 
-    private func readStringAttribute(_ attribute: CFString, from element: AXUIElement) throws -> String? {
+    private func readStringAttribute(_ attribute: CFString, from element: AXUIElement) throws
+        -> String?
+    {
         var rawValue: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(element, attribute, &rawValue)
         guard status == .success else {
@@ -121,7 +138,8 @@ struct DefaultAXFocusedTextService: AXFocusedTextService {
 
         for _ in 0..<6 {
             var parent: CFTypeRef?
-            let status = AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent)
+            let status = AXUIElementCopyAttributeValue(
+                current, kAXParentAttribute as CFString, &parent)
             guard status == .success, let parent, let parentElement = asAXUIElement(parent) else {
                 break
             }

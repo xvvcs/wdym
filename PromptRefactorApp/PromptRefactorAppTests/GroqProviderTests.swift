@@ -1,6 +1,7 @@
 import Foundation
 import PromptRefactorCore
 import Testing
+
 @testable import PromptRefactorApp
 
 @Suite(.serialized)
@@ -13,9 +14,9 @@ struct GroqProviderTests {
             language: "English"
         )
 
-        let payload = GroqRequestBuilder().build(request: request, model: .llama31_8bInstant)
+        let payload = GroqRequestBuilder().build(request: request, model: .llama318bInstant)
 
-        #expect(payload.model == GroqModel.llama31_8bInstant.rawValue)
+        #expect(payload.model == GroqModel.llama318bInstant.rawValue)
         #expect(payload.temperature == 0.2)
         #expect(payload.messages.count == 2)
         #expect(payload.messages[0].role == "system")
@@ -26,21 +27,21 @@ struct GroqProviderTests {
         let session = makeSession(
             statusCode: 200,
             json: """
-            {
-              "choices": [
                 {
-                  "message": {
-                    "content": "Refactored prompt output"
-                  }
+                  "choices": [
+                    {
+                      "message": {
+                        "content": "Refactored prompt output"
+                      }
+                    }
+                  ]
                 }
-              ]
-            }
-            """
+                """
         )
 
         let provider = GroqProvider(
             apiKey: "test-key",
-            model: .llama31_8bInstant,
+            model: .llama318bInstant,
             session: session
         )
 
@@ -55,17 +56,17 @@ struct GroqProviderTests {
         let session = makeSession(
             statusCode: 401,
             json: """
-            {
-              "error": {
-                "message": "Unauthorized"
-              }
-            }
-            """
+                {
+                  "error": {
+                    "message": "Unauthorized"
+                  }
+                }
+                """
         )
 
         let provider = GroqProvider(
             apiKey: "bad-key",
-            model: .llama31_8bInstant,
+            model: .llama318bInstant,
             session: session
         )
 

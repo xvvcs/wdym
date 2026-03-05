@@ -64,8 +64,9 @@ struct DefaultTextCommandService: TextCommandService {
             return false
         }
 
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        guard
+            let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
         else {
             return false
         }

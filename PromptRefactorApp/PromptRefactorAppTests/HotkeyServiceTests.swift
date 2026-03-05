@@ -1,5 +1,6 @@
 import AppKit
 import Testing
+
 @testable import PromptRefactorApp
 
 @MainActor
@@ -11,9 +12,15 @@ struct HotkeyServiceTests {
     }
 
     @Test func shortcutPresetProvidesExpectedKeyBindings() {
-        #expect(ShortcutPreset.commandShiftR.binding == HotkeyBinding(keyCode: 15, modifiers: [.command, .shift]))
-        #expect(ShortcutPreset.commandOptionR.binding == HotkeyBinding(keyCode: 15, modifiers: [.command, .option]))
-        #expect(ShortcutPreset.commandShiftSpace.binding == HotkeyBinding(keyCode: 49, modifiers: [.command, .shift]))
+        #expect(
+            ShortcutPreset.commandShiftR.binding
+                == HotkeyBinding(keyCode: 15, modifiers: [.command, .shift]))
+        #expect(
+            ShortcutPreset.commandOptionR.binding
+                == HotkeyBinding(keyCode: 15, modifiers: [.command, .option]))
+        #expect(
+            ShortcutPreset.commandShiftSpace.binding
+                == HotkeyBinding(keyCode: 49, modifiers: [.command, .shift]))
     }
 
     @Test func hotkeyBindingMatchesEquivalentKeyboardEvent() {

@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import PromptRefactorCore
 import Testing
+
 @testable import PromptRefactorApp
 
 @MainActor
@@ -192,13 +193,16 @@ struct AppRuntimeControllerTests {
     }
 
     @Test func runKittyRemoteControlCheckUpdatesStatusMessage() async {
-        let kittyRemoteControl = StubKittyRemoteControlService(connectionStatus: .available("unix:/tmp/prompt-refactor-kitty-999"))
+        let kittyRemoteControl = StubKittyRemoteControlService(
+            connectionStatus: .available("unix:/tmp/prompt-refactor-kitty-999"))
         let runtime = makeRuntime(initialAPIKey: nil, kittyRemoteControl: kittyRemoteControl)
 
         runtime.runKittyRemoteControlCheck()
         await waitForKittyStatusUpdate(of: runtime)
 
-        #expect(runtime.kittyRemoteControlStatusMessage == "Kitty remote control is reachable at unix:/tmp/prompt-refactor-kitty-999")
+        #expect(
+            runtime.kittyRemoteControlStatusMessage
+                == "Kitty remote control is reachable at unix:/tmp/prompt-refactor-kitty-999")
     }
 
     @Test func refactorNowReportsAccessibilityMissingWhenNotTrusted() async {
@@ -309,9 +313,12 @@ struct AppRuntimeControllerTests {
         #expect(hotkey.startedBinding == ShortcutPreset.commandShiftR.binding)
 
         runtime.settingsStore.updateUseCustomShortcut(true)
-        runtime.settingsStore.updateCustomShortcut(HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+        runtime.settingsStore.updateCustomShortcut(
+            HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
 
-        #expect(hotkey.updatedBindings.last == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+        #expect(
+            hotkey.updatedBindings.last
+                == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
     }
 
     private func makeRuntime(
@@ -321,12 +328,14 @@ struct AppRuntimeControllerTests {
         clipboard: StubClipboardService = StubClipboardService(initialRead: nil),
         textCommands: StubTextCommandService = StubTextCommandService(),
         kittyRemoteControl: StubKittyRemoteControlService = StubKittyRemoteControlService(),
-        focused: StubFocusedTextService = StubFocusedTextService(readError: AXFocusedTextError.noFocusedElement),
+        focused: StubFocusedTextService = StubFocusedTextService(
+            readError: AXFocusedTextError.noFocusedElement),
         permission: SpyAXPermissionService = SpyAXPermissionService(initialTrusted: false),
         frontmostBundleIdentifier: @escaping () -> String? = { nil }
     ) -> AppRuntimeController {
         let suite = "AppRuntimeControllerTests.\(UUID().uuidString)"
-        let settingsStore = UserDefaultsAppSettingsStore(userDefaults: UserDefaults(suiteName: suite)!)
+        let settingsStore = UserDefaultsAppSettingsStore(
+            userDefaults: UserDefaults(suiteName: suite)!)
 
         let keychainStore = keychain ?? InMemoryKeychainStore(apiKey: initialAPIKey)
         if keychain == nil {
@@ -380,7 +389,8 @@ private final class StubKittyRemoteControlService: KittyRemoteControlService {
     private(set) var readScreenTextCalls = 0
 
     init(
-        connectionStatus: KittyRemoteControlConnectionStatus = .unavailable("Kitty remote control unavailable"),
+        connectionStatus: KittyRemoteControlConnectionStatus = .unavailable(
+            "Kitty remote control unavailable"),
         selectionResult: Result<String, KittyRemoteControlError> = .failure(.emptySelection),
         screenTextResult: Result<String, KittyRemoteControlError> = .failure(.emptySelection)
     ) {
@@ -394,12 +404,16 @@ private final class StubKittyRemoteControlService: KittyRemoteControlService {
         return connectionStatus
     }
 
-    func readFocusedSelection(listenAddress: String) async -> Result<String, KittyRemoteControlError> {
+    func readFocusedSelection(listenAddress: String) async -> Result<
+        String, KittyRemoteControlError
+    > {
         readSelectionCalls += 1
         return selectionResult
     }
 
-    func readFocusedScreenText(listenAddress: String) async -> Result<String, KittyRemoteControlError> {
+    func readFocusedScreenText(listenAddress: String) async -> Result<
+        String, KittyRemoteControlError
+    > {
         readScreenTextCalls += 1
         return screenTextResult
     }

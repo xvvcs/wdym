@@ -1,4 +1,5 @@
 import Testing
+
 @testable import PromptRefactorApp
 
 @MainActor
@@ -7,7 +8,8 @@ struct ProviderFactoryTests {
         let settings = AppSettings.default
         let factory = ProviderFactory()
 
-        let provider = factory.makeProvider(settings: settings, keychainStore: InMemoryKeychainStore(apiKey: "key"))
+        let provider = factory.makeProvider(
+            settings: settings, keychainStore: InMemoryKeychainStore(apiKey: "key"))
 
         #expect(provider == nil)
     }

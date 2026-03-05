@@ -7,6 +7,7 @@
 
 import PromptRefactorCore
 import Testing
+
 @testable import PromptRefactorApp
 
 @MainActor
@@ -64,6 +65,6 @@ struct PromptRefactorAppTests {
     @Test func groqModelFallbackUsesSpeedFirstDefault() {
         let model = GroqModel.from(rawValue: "unknown-model")
 
-        #expect(model == .llama31_8bInstant)
+        #expect(model == .llama318bInstant)
     }
 }

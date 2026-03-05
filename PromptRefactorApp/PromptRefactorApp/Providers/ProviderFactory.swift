@@ -7,7 +7,10 @@ struct ProviderFactory {
             return nil
         }
 
-        guard let apiKey = keychainStore.loadGroqAPIKey()?.trimmingCharacters(in: .whitespacesAndNewlines), !apiKey.isEmpty else {
+        guard
+            let apiKey = keychainStore.loadGroqAPIKey()?.trimmingCharacters(
+                in: .whitespacesAndNewlines), !apiKey.isEmpty
+        else {
             return nil
         }
 
