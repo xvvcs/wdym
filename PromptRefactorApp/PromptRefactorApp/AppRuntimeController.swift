@@ -550,7 +550,9 @@ final class AppRuntimeController: ObservableObject {
     }
 
     pasteMonitorService.startMonitoring { [weak self] in
-      self?.handlePasteDetected()
+      Task { @MainActor [weak self] in
+        self?.handlePasteDetected()
+      }
     }
   }
 
