@@ -16,6 +16,9 @@ struct AppSettings: Equatable {
   var useCustomShortcut: Bool
   var customShortcutKeyCode: UInt16
   var customShortcutModifiersRawValue: UInt
+  var autoRefactorOnPaste: Bool
+  var pasteMonitorAllowedBundleIDs: [String]
+  var soundCuesEnabled: Bool
 
   static let `default` = AppSettings(
     outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
@@ -30,7 +33,10 @@ struct AppSettings: Equatable {
     shortcutPresetRawValue: ShortcutPreset.commandShiftR.rawValue,
     useCustomShortcut: false,
     customShortcutKeyCode: ShortcutPreset.commandShiftR.binding.keyCode,
-    customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue
+    customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue,
+    autoRefactorOnPaste: true,
+    pasteMonitorAllowedBundleIDs: [],
+    soundCuesEnabled: true
   )
 
   var shortcutPreset: ShortcutPreset {
@@ -139,6 +145,27 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     }
   }
 
+  func updateAutoRefactorOnPaste(_ value: Bool) {
+    updateSettings { $0.autoRefactorOnPaste = value }
+  }
+
+  func updatePasteMonitorAllowedBundleIDs(_ ids: [String]) {
+    updateSettings { $0.pasteMonitorAllowedBundleIDs = ids }
+  }
+
+  func addPasteMonitorAllowedBundleID(_ id: String) {
+    guard !settings.pasteMonitorAllowedBundleIDs.contains(id) else { return }
+    updateSettings { $0.pasteMonitorAllowedBundleIDs.append(id) }
+  }
+
+  func removePasteMonitorAllowedBundleID(_ id: String) {
+    updateSettings { $0.pasteMonitorAllowedBundleIDs.removeAll { $0 == id } }
+  }
+
+  func updateSoundCuesEnabled(_ value: Bool) {
+    updateSettings { $0.soundCuesEnabled = value }
+  }
+
   private func updateSettings(_ mutation: (inout AppSettings) -> Void) {
     var updated = settings
     mutation(&updated)
@@ -164,6 +191,9 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(settings.useCustomShortcut, forKey: Keys.useCustomShortcut)
     userDefaults.set(Int(settings.customShortcutKeyCode), forKey: Keys.customShortcutKeyCode)
     userDefaults.set(settings.customShortcutModifiersRawValue, forKey: Keys.customShortcutModifiers)
+    userDefaults.set(settings.autoRefactorOnPaste, forKey: Keys.autoRefactorOnPaste)
+    userDefaults.set(settings.pasteMonitorAllowedBundleIDs, forKey: Keys.pasteMonitorAllowedBundleIDs)
+    userDefaults.set(settings.soundCuesEnabled, forKey: Keys.soundCuesEnabled)
   }
 
   private static func load(from userDefaults: UserDefaults) -> AppSettings {
@@ -224,6 +254,20 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       ? AppSettings.default.customShortcutModifiersRawValue
       : UInt(userDefaults.integer(forKey: Keys.customShortcutModifiers))
 
+    let autoRefactorOnPaste =
+      userDefaults.object(forKey: Keys.autoRefactorOnPaste) == nil
+      ? AppSettings.default.autoRefactorOnPaste
+      : userDefaults.bool(forKey: Keys.autoRefactorOnPaste)
+
+    let pasteMonitorAllowedBundleIDs =
+      userDefaults.stringArray(forKey: Keys.pasteMonitorAllowedBundleIDs)
+      ?? AppSettings.default.pasteMonitorAllowedBundleIDs
+
+    let soundCuesEnabled =
+      userDefaults.object(forKey: Keys.soundCuesEnabled) == nil
+      ? AppSettings.default.soundCuesEnabled
+      : userDefaults.bool(forKey: Keys.soundCuesEnabled)
+
     return AppSettings(
       outputModeRawValue: outputMode,
       promptStyleRawValue: promptStyle,
@@ -237,7 +281,10 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       shortcutPresetRawValue: shortcutPreset,
       useCustomShortcut: useCustomShortcut,
       customShortcutKeyCode: customShortcutKeyCode,
-      customShortcutModifiersRawValue: customShortcutModifiersRawValue
+      customShortcutModifiersRawValue: customShortcutModifiersRawValue,
+      autoRefactorOnPaste: autoRefactorOnPaste,
+      pasteMonitorAllowedBundleIDs: pasteMonitorAllowedBundleIDs,
+      soundCuesEnabled: soundCuesEnabled
     )
   }
 }
@@ -256,4 +303,7 @@ private enum Keys {
   static let useCustomShortcut = "useCustomShortcut"
   static let customShortcutKeyCode = "customShortcutKeyCode"
   static let customShortcutModifiers = "customShortcutModifiers"
+  static let autoRefactorOnPaste = "autoRefactorOnPaste"
+  static let pasteMonitorAllowedBundleIDs = "pasteMonitorAllowedBundleIDs"
+  static let soundCuesEnabled = "soundCuesEnabled"
 }

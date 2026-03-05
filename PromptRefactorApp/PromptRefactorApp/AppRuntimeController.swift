@@ -23,11 +23,15 @@ final class AppRuntimeController: ObservableObject {
   private let keychainStore: any KeychainStore
   private let providerFactory: ProviderFactory
   private let frontmostBundleIdentifierProvider: () -> String?
+  private let pasteMonitorService: any PasteMonitorService
+  private let soundCueService: SoundCueService
   private var cancellables: Set<AnyCancellable> = []
   private var activeRefactorTask: Task<Void, Never>?
+  private var pendingPasteTask: Task<Void, Never>?
 
   init() {
-    self.settingsStore = UserDefaultsAppSettingsStore()
+    let store = UserDefaultsAppSettingsStore()
+    self.settingsStore = store
     self.refactorService = PromptRefactorService()
     self.hotkeyService = GlobalHotkeyService()
     self.clipboardService = PasteboardClipboardService()
@@ -40,11 +44,15 @@ final class AppRuntimeController: ObservableObject {
     self.frontmostBundleIdentifierProvider = {
       NSWorkspace.shared.frontmostApplication?.bundleIdentifier
     }
+    self.pasteMonitorService = CGEventPasteMonitorService()
+    self.soundCueService = SoundCueService(isEnabled: { store.settings.soundCuesEnabled })
 
     configureHotkey()
     observeShortcutChanges()
     refreshGroqAPIKeyState()
     refreshAccessibilityState()
+    configurePasteMonitor()
+    observePasteMonitorSetting()
   }
 
   init(
@@ -58,7 +66,9 @@ final class AppRuntimeController: ObservableObject {
     permissionService: any AXPermissionService,
     keychainStore: any KeychainStore,
     providerFactory: ProviderFactory,
-    frontmostBundleIdentifierProvider: @escaping () -> String?
+    frontmostBundleIdentifierProvider: @escaping () -> String?,
+    pasteMonitorService: (any PasteMonitorService)? = nil,
+    soundCueService: SoundCueService? = nil
   ) {
     self.settingsStore = settingsStore
     self.refactorService = refactorService
@@ -71,11 +81,17 @@ final class AppRuntimeController: ObservableObject {
     self.keychainStore = keychainStore
     self.providerFactory = providerFactory
     self.frontmostBundleIdentifierProvider = frontmostBundleIdentifierProvider
+    self.pasteMonitorService = pasteMonitorService ?? CGEventPasteMonitorService()
+    self.soundCueService =
+      soundCueService
+      ?? SoundCueService(isEnabled: { settingsStore.settings.soundCuesEnabled })
 
     configureHotkey()
     observeShortcutChanges()
     refreshGroqAPIKeyState()
     refreshAccessibilityState()
+    configurePasteMonitor()
+    observePasteMonitorSetting()
   }
 
   func refactorNow() {
@@ -165,6 +181,7 @@ final class AppRuntimeController: ObservableObject {
         status = "Cannot replace from clipboard source"
       }
 
+      soundCueService.play(.refactorFailed)
       return
     }
 
@@ -175,6 +192,7 @@ final class AppRuntimeController: ObservableObject {
         status = "No focused text or clipboard text"
       }
 
+      soundCueService.play(.refactorFailed)
       return
     }
 
@@ -184,10 +202,12 @@ final class AppRuntimeController: ObservableObject {
       }
 
       status = "Skipped: text looks like a secret"
+      soundCueService.play(.refactorFailed)
       return
     }
 
     status = "Refactoring..."
+    soundCueService.play(.refactorStarted)
 
     let options = preferences.buildOptions()
     let llmInput = refactorService.buildPrompt(from: rawText, options: options)
@@ -195,6 +215,7 @@ final class AppRuntimeController: ObservableObject {
     let localFallback = refactorService.normalizeDictation(rawText)
     guard !localFallback.isEmpty else {
       status = "Nothing to refactor"
+      soundCueService.play(.refactorFailed)
       return
     }
 
@@ -245,6 +266,7 @@ final class AppRuntimeController: ObservableObject {
 
       case .selectionCopy:
         clipboardService.writeString(finalOutput)
+        pasteMonitorService.suppressNextEvent()
         replaced = await textCommandService.pasteFromClipboard()
 
       case .clipboard:
@@ -265,6 +287,8 @@ final class AppRuntimeController: ObservableObject {
       clipboardService.writeString(finalOutput)
       copied = true
     }
+
+    soundCueService.play(.refactorCompleted)
 
     if replaced && copied {
       status = "Replaced field and copied output"
@@ -517,6 +541,53 @@ final class AppRuntimeController: ObservableObject {
 
     if hasValue {
       groqAPIKeyInput = stored
+    }
+  }
+
+  private func configurePasteMonitor() {
+    guard settingsStore.settings.autoRefactorOnPaste else {
+      return
+    }
+
+    pasteMonitorService.startMonitoring { [weak self] in
+      self?.handlePasteDetected()
+    }
+  }
+
+  private func observePasteMonitorSetting() {
+    settingsStore.$settings
+      .map(\.autoRefactorOnPaste)
+      .removeDuplicates()
+      .dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] enabled in
+        guard let self else { return }
+        if enabled {
+          self.configurePasteMonitor()
+        } else {
+          self.pasteMonitorService.stopMonitoring()
+        }
+      }
+      .store(in: &cancellables)
+  }
+
+  private func handlePasteDetected() {
+    let allowedIDs = settingsStore.settings.pasteMonitorAllowedBundleIDs
+    if !allowedIDs.isEmpty {
+      guard
+        let frontmost = frontmostBundleIdentifierProvider(),
+        allowedIDs.contains(frontmost)
+      else {
+        return
+      }
+    }
+
+    pendingPasteTask?.cancel()
+    pendingPasteTask = Task { [weak self] in
+      guard let self else { return }
+      try? await Task.sleep(nanoseconds: 300_000_000)
+      guard !Task.isCancelled else { return }
+      self.refactorNow()
     }
   }
 

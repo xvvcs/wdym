@@ -241,6 +241,9 @@ private struct OptionsView: View {
           Toggle("Auto-select all on shortcut", isOn: autoSelectAllBinding)
             .accessibilityIdentifier("options.toggle.autoSelectAll")
             .toggleStyle(.switch)
+          Toggle("Sound cues", isOn: soundCuesBinding)
+            .accessibilityIdentifier("options.toggle.soundCues")
+            .toggleStyle(.switch)
         }
 
         settingsCard(
@@ -468,6 +471,13 @@ private struct OptionsView: View {
     Binding(
       get: { settingsStore.settings.autoSelectAllOnTrigger },
       set: { settingsStore.updateAutoSelectAllOnTrigger($0) }
+    )
+  }
+
+  private var soundCuesBinding: Binding<Bool> {
+    Binding(
+      get: { settingsStore.settings.soundCuesEnabled },
+      set: { settingsStore.updateSoundCuesEnabled($0) }
     )
   }
 
