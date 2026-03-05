@@ -30,9 +30,9 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 >
 > <!-- Replace the section below with actual screenshots or a demo GIF/video -->
 >
-> | Menu Bar | Options Panel |
-> |----------|---------------|
-> | <img width="335" height="245" alt="image" src="https://github.com/user-attachments/assets/8dd3224f-3e30-41be-871d-a0de23f13d30" /> | <img width="888" height="808" alt="image" src="https://github.com/user-attachments/assets/a6551c83-2132-4b34-9525-748caae5f7cf" /> |
+> | Menu Bar | Options Panel | Fast prompt styles switches |
+> |----------|---------------|-----------------------------|
+> | <img width="335" height="245" alt="image" src="https://github.com/user-attachments/assets/8dd3224f-3e30-41be-871d-a0de23f13d30" /> | <img width="888" height="808" alt="image" src="https://github.com/user-attachments/assets/a6551c83-2132-4b34-9525-748caae5f7cf" /> | <img width="243" height="181" alt="image" src="https://github.com/user-attachments/assets/e1d7d125-c214-4cef-98d0-e1678133a7bf" /> |
 
 
 ---
