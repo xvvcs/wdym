@@ -34,7 +34,7 @@ struct AppSettings: Equatable {
     useCustomShortcut: false,
     customShortcutKeyCode: ShortcutPreset.commandShiftR.binding.keyCode,
     customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue,
-    autoRefactorOnPaste: true,
+    autoRefactorOnPaste: false,
     pasteMonitorAllowedBundleIDs: [],
     soundCuesEnabled: true
   )
