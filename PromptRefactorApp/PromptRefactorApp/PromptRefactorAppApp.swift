@@ -70,17 +70,23 @@ private struct MenuBarContent: View {
           .textCase(.uppercase)
           .foregroundStyle(Color.white.opacity(0.62))
 
-        Text(status)
-          .font(.subheadline)
-          .foregroundStyle(.white)
-          .lineLimit(3)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 10)
-          .padding(.vertical, 8)
-          .background(
-            RoundedRectangle(cornerRadius: 10)
-              .fill(Color.white.opacity(0.08))
-          )
+        Group {
+          if status == "Idle" {
+            IdleStatusView()
+          } else {
+            Text(status)
+              .font(.subheadline)
+              .foregroundStyle(.white)
+              .lineLimit(3)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+          RoundedRectangle(cornerRadius: 10)
+            .fill(Color.white.opacity(0.08))
+        )
       }
 
       Button("Refactor Now") {
@@ -611,6 +617,45 @@ private struct UpdateBannerView: View {
             .stroke(Color.green.opacity(0.35), lineWidth: 1)
         )
     )
+  }
+}
+
+// MARK: - Idle waiting animation
+
+private struct IdleStatusView: View {
+  @State private var phase = 0
+
+  private let dotCount = 3
+  private let interval = 0.45
+
+  var body: some View {
+    HStack(spacing: 6) {
+      HStack(spacing: 4) {
+        ForEach(0..<dotCount, id: \.self) { index in
+          Circle()
+            .fill(Color.white.opacity(phase == index ? 0.9 : 0.25))
+            .frame(width: 5, height: 5)
+            .animation(
+              .easeInOut(duration: interval * 0.9),
+              value: phase
+            )
+        }
+      }
+
+      Text("Waiting for your move")
+        .font(.subheadline)
+        .foregroundStyle(Color.white.opacity(0.72))
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .onAppear {
+      startAnimation()
+    }
+  }
+
+  private func startAnimation() {
+    Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
+      phase = (phase + 1) % dotCount
+    }
   }
 }
 
