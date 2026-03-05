@@ -86,6 +86,16 @@ struct CustomPromptStyle: Codable, Equatable, Identifiable {
   }
 }
 
+struct PromptStyleChoice: Identifiable, Equatable {
+  let selection: PromptStyleSelection
+  let title: String
+  let subtitle: String
+
+  var id: PromptStyleSelection {
+    selection
+  }
+}
+
 enum PromptStyleSelection: Hashable {
   static let customPrefix = "custom:"
 
@@ -156,4 +166,66 @@ extension PromptStyle {
       return "Best Practices"
     }
   }
+
+  var shortDescription: String {
+    switch self {
+    case .general:
+      return "Balanced cleanup for everyday prompts"
+    case .coding:
+      return "Technical precision with implementation details"
+    case .writing:
+      return "Tone and readability improvements"
+    case .search:
+      return "Keyword-dense search phrasing"
+    case .research:
+      return "Scoped investigation with depth and evidence"
+    case .bestPractices:
+      return "Ranked recommendations with rationale"
+    }
+  }
+}
+
+extension PromptStyleSelection {
+  func displayTitle(customPromptStyles: [CustomPromptStyle]) -> String {
+    switch self {
+    case .builtIn(let style):
+      return style.displayTitle
+    case .custom(let name):
+      return customPromptStyles.firstStyle(named: name)?.name ?? name
+    }
+  }
+
+  func subtitle(customPromptStyles: [CustomPromptStyle]) -> String {
+    switch self {
+    case .builtIn(let style):
+      return style.shortDescription
+    case .custom(let name):
+      guard let style = customPromptStyles.firstStyle(named: name) else {
+        return "Custom prompt instructions"
+      }
+
+      let summary = style.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+      return summary.isEmpty ? "Custom prompt instructions" : summary
+    }
+  }
+}
+
+func buildPromptStyleChoices(customPromptStyles: [CustomPromptStyle]) -> [PromptStyleChoice] {
+  let builtIn = PromptStyle.allCases.map {
+    PromptStyleChoice(
+      selection: .builtIn($0),
+      title: $0.displayTitle,
+      subtitle: $0.shortDescription
+    )
+  }
+
+  let custom = customPromptStyles.map {
+    PromptStyleChoice(
+      selection: .custom(name: $0.name),
+      title: "\($0.name) (Custom)",
+      subtitle: $0.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    )
+  }
+
+  return builtIn + custom
 }

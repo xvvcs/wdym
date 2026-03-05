@@ -34,6 +34,7 @@ struct AppSettingsStoreTests {
     store.updateShortcutPresetRawValue(ShortcutPreset.commandOptionR.rawValue)
     store.updateUseCustomShortcut(true)
     store.updateCustomShortcut(HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+    store.updateStyleSwitchShortcut(HotkeyBinding(keyCode: 2, modifiers: [.command, .control]))
 
     let reloaded = UserDefaultsAppSettingsStore(userDefaults: fixture.userDefaults)
 
@@ -51,6 +52,9 @@ struct AppSettingsStoreTests {
     #expect(
       reloaded.settings.customShortcutBinding
         == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
+    #expect(
+      reloaded.settings.styleSwitchShortcutBinding
+        == HotkeyBinding(keyCode: 2, modifiers: [.command, .control]))
     #expect(
       reloaded.settings.activeShortcutBinding
         == HotkeyBinding(keyCode: 17, modifiers: [.command, .option]))
@@ -228,6 +232,9 @@ struct AppSettingsStoreTests {
     #expect(store.settings.kittyListenAddress == "unix:/tmp/prompt-refactor-kitty")
     #expect(!store.settings.useCustomShortcut)
     #expect(store.settings.activeShortcutBinding == ShortcutPreset.commandShiftR.binding)
+    #expect(
+      store.settings.styleSwitchShortcutBinding
+        == HotkeyBinding(keyCode: 30, modifiers: [.command, .control]))
   }
 
   @Test func storePublishesUpdatedSettingsImmediately() {

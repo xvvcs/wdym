@@ -46,6 +46,7 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 | ✏️ **Smart cleanup** | Removes filler words, fixes punctuation, and structures your intent |
 | 🤖 **AI refinement** | Optional Groq integration for fast, high-quality LLM polish |
 | 🎨 **Prompt styles** | General, Coding, Writing, Search, Research, Best Practices |
+| 🔁 **Style switch HUD** | Cycle prompt styles from a dedicated shortcut with an on-screen visual picker |
 | 📋 **Flexible output** | Replace in-field, copy to clipboard, or both — your choice |
 | 🐱 **Terminal-aware** | First-class Kitty/OpenCode support via remote control integration |
 | 🔒 **Privacy first** | No history, no analytics — keys in Keychain, prefs in UserDefaults |
@@ -114,6 +115,7 @@ All settings live in the **Options** panel in the menu bar.
 |---------|---------|
 | **Output mode** | Replace + Copy · Replace only · Copy only |
 | **Prompt style** | General · Coding · Writing · Search · Research · Best Practices |
+| **Style switch shortcut** | Dedicated global shortcut for cycling prompt styles with a transient HUD |
 | **Shortcut** | Choose a preset or record your own key combination |
 | **AI refinement** | Enable Groq and enter your API key for LLM-powered polish |
 | **Groq model** | Speed-first default (`llama-3.1-8b-instant`), configurable |

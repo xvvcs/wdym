@@ -21,7 +21,8 @@ struct PromptRefactorAppApp: App {
         status: $runtime.status,
         refactorNow: runtime.refactorNow,
         setupCompleted: $setupCompleted,
-        updateChecker: runtime.updateChecker
+        updateChecker: runtime.updateChecker,
+        settingsStore: runtime.settingsStore
       )
     }
     .menuBarExtraStyle(.window)
@@ -49,6 +50,7 @@ private struct MenuBarContent: View {
   let refactorNow: () -> Void
   @Binding var setupCompleted: Bool
   @ObservedObject var updateChecker: UpdateChecker
+  @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
 
   @Environment(\.openWindow) private var openWindow
   @Environment(\.dismiss) private var dismiss
@@ -89,6 +91,36 @@ private struct MenuBarContent: View {
           RoundedRectangle(cornerRadius: 10)
             .fill(Color.white.opacity(0.08))
         )
+      }
+
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Prompt style")
+          .font(.caption)
+          .fontWeight(.semibold)
+          .textCase(.uppercase)
+          .foregroundStyle(Color.white.opacity(0.62))
+
+        Menu {
+          ForEach(promptStyleChoices) { choice in
+            Button {
+              settingsStore.updatePromptStyleSelection(choice.selection)
+            } label: {
+              HStack {
+                Text(choice.title)
+
+                if choice.selection == settingsStore.settings.promptStyleSelection {
+                  Image(systemName: "checkmark")
+                }
+              }
+            }
+          }
+        } label: {
+          Text(activePromptStyleTitle)
+            .font(.subheadline)
+            .foregroundStyle(.white)
+            .lineLimit(1)
+        }
+        .menuStyle(.borderlessButton)
       }
 
       Button("Refactor Now") {
@@ -161,6 +193,16 @@ private struct MenuBarContent: View {
         )
     )
   }
+
+  private var activePromptStyleTitle: String {
+    settingsStore.settings.promptStyleSelection.displayTitle(
+      customPromptStyles: settingsStore.settings.customPromptStyles
+    )
+  }
+
+  private var promptStyleChoices: [PromptStyleChoice] {
+    buildPromptStyleChoices(customPromptStyles: settingsStore.settings.customPromptStyles)
+  }
 }
 
 private struct OptionsView: View {
@@ -168,6 +210,7 @@ private struct OptionsView: View {
   @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
   @ObservedObject var updateChecker: UpdateChecker
   @StateObject private var shortcutRecorder = ShortcutRecorder()
+  @StateObject private var styleSwitchShortcutRecorder = ShortcutRecorder()
   @Namespace private var optionsTabSelection
   @State private var selectedTab: OptionsTab = .general
   @State private var newCustomPromptStyle = CustomPromptStyleDraft()
@@ -213,6 +256,7 @@ private struct OptionsView: View {
     )
     .onDisappear {
       shortcutRecorder.stopRecording()
+      styleSwitchShortcutRecorder.stopRecording()
     }
   }
 
@@ -259,15 +303,22 @@ private struct OptionsView: View {
           }
 
           settingRow(label: "Prompt style") {
-            Picker("Prompt style", selection: promptStyleBinding) {
-              ForEach(promptStyleOptions) { option in
-                Text(option.title).tag(option.id)
+            VStack(alignment: .trailing, spacing: 6) {
+              Picker("Prompt style", selection: promptStyleBinding) {
+                ForEach(promptStyleOptions) { option in
+                  Text(option.title).tag(option.id)
+                }
               }
+              .accessibilityIdentifier("options.picker.promptStyle")
+              .labelsHidden()
+              .pickerStyle(.menu)
+              .frame(maxWidth: 260)
+
+              Text(selectedPromptStyleSubtitle)
+                .font(.caption)
+                .foregroundStyle(Color.white.opacity(0.62))
+                .frame(maxWidth: 260, alignment: .trailing)
             }
-            .accessibilityIdentifier("options.picker.promptStyle")
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(maxWidth: 260)
           }
 
           settingRow(label: "Shortcut") {
@@ -301,6 +352,36 @@ private struct OptionsView: View {
                   .font(.caption)
                   .foregroundStyle(Color.white.opacity(0.62))
               }
+            }
+            .frame(maxWidth: 260)
+          }
+
+          settingRow(label: "Style switch shortcut") {
+            VStack(alignment: .trailing, spacing: 8) {
+              Text("Cycles prompt styles and shows the on-screen HUD.")
+                .font(.caption)
+                .foregroundStyle(Color.white.opacity(0.62))
+                .multilineTextAlignment(.trailing)
+
+              Text("Active: \(settingsStore.settings.styleSwitchShortcutBinding.title)")
+                .font(.caption)
+                .foregroundStyle(Color.white.opacity(0.72))
+
+              Button(styleSwitchShortcutRecorder.isRecording ? "Stop Recording" : "Record Shortcut")
+              {
+                toggleStyleSwitchShortcutRecording()
+              }
+              .accessibilityIdentifier("options.button.recordStyleSwitchShortcut")
+              .buttonStyle(OutlineActionButtonStyle())
+
+              Text(styleSwitchShortcutStatusMessage)
+                .font(.caption)
+                .foregroundStyle(
+                  styleSwitchShortcutConflictMessage == nil
+                    ? Color.white.opacity(0.62)
+                    : Color.red.opacity(0.82)
+                )
+                .multilineTextAlignment(.trailing)
             }
             .frame(maxWidth: 260)
           }
@@ -573,17 +654,9 @@ private struct OptionsView: View {
   }
 
   private var promptStyleOptions: [PromptStyleOption] {
-    let builtIn = PromptStyle.allCases.map {
-      PromptStyleOption(selection: .builtIn($0), title: $0.displayTitle)
+    buildPromptStyleChoices(customPromptStyles: settingsStore.settings.customPromptStyles).map {
+      PromptStyleOption(selection: $0.selection, title: $0.title)
     }
-    let custom = settingsStore.settings.customPromptStyles.map {
-      PromptStyleOption(
-        selection: .custom(name: $0.name),
-        title: "\($0.name) (Custom)"
-      )
-    }
-
-    return builtIn + custom
   }
 
   private var shortcutPresetBinding: Binding<String> {
@@ -669,9 +742,37 @@ private struct OptionsView: View {
       return
     }
 
+    styleSwitchShortcutRecorder.stopRecording()
+
     shortcutRecorder.startRecording { binding in
+      guard binding != settingsStore.settings.styleSwitchShortcutBinding else {
+        shortcutRecorder.stopRecording(message: "Shortcut already used for style switching")
+        return
+      }
+
       settingsStore.updateCustomShortcut(binding)
       settingsStore.updateUseCustomShortcut(true)
+    }
+  }
+
+  private func toggleStyleSwitchShortcutRecording() {
+    if styleSwitchShortcutRecorder.isRecording {
+      styleSwitchShortcutRecorder.stopRecording()
+      return
+    }
+
+    shortcutRecorder.stopRecording()
+
+    styleSwitchShortcutRecorder.startRecording { binding in
+      guard binding != settingsStore.settings.activeShortcutBinding else {
+        styleSwitchShortcutRecorder.stopRecording(
+          message: "Shortcut already used for refactoring"
+        )
+        return
+      }
+
+      settingsStore.updateStyleSwitchShortcut(binding)
+      styleSwitchShortcutRecorder.stopRecording(message: "Captured \(binding.title)")
     }
   }
 
@@ -826,6 +927,27 @@ private struct OptionsView: View {
 
   private func isCustomStyleSelected(_ name: String) -> Bool {
     settingsStore.settings.promptStyleSelection == .custom(name: name)
+  }
+
+  private var selectedPromptStyleSubtitle: String {
+    settingsStore.settings.promptStyleSelection.subtitle(
+      customPromptStyles: settingsStore.settings.customPromptStyles
+    )
+  }
+
+  private var styleSwitchShortcutConflictMessage: String? {
+    guard
+      settingsStore.settings.styleSwitchShortcutBinding
+        == settingsStore.settings.activeShortcutBinding
+    else {
+      return nil
+    }
+
+    return "Style switch shortcut must differ from the refactor shortcut."
+  }
+
+  private var styleSwitchShortcutStatusMessage: String {
+    styleSwitchShortcutConflictMessage ?? styleSwitchShortcutRecorder.statusMessage
   }
 
   private var editingCustomPromptStyleNameBinding: Binding<String> {

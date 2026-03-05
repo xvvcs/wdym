@@ -1,44 +1,44 @@
 import Foundation
 
-struct GroqChatCompletionRequest: Encodable {
-    let model: String
-    let messages: [GroqChatMessage]
-    let temperature: Double
+nonisolated struct GroqChatCompletionRequest: Encodable, Sendable {
+  let model: String
+  let messages: [GroqChatMessage]
+  let temperature: Double
 }
 
-struct GroqChatMessage: Encodable {
-    let role: String
-    let content: String
+nonisolated struct GroqChatMessage: Encodable, Sendable {
+  let role: String
+  let content: String
 }
 
-struct GroqChatCompletionResponse: Decodable {
-    let choices: [GroqChoice]
+nonisolated struct GroqChatCompletionResponse: Decodable, Sendable {
+  let choices: [GroqChoice]
 }
 
-struct GroqChoice: Decodable {
-    let message: GroqResponseMessage
+nonisolated struct GroqChoice: Decodable, Sendable {
+  let message: GroqResponseMessage
 }
 
-struct GroqResponseMessage: Decodable {
-    let content: String?
+nonisolated struct GroqResponseMessage: Decodable, Sendable {
+  let content: String?
 }
 
-enum GroqModel: String, CaseIterable, Identifiable {
-    case llama31_8bInstant = "llama-3.1-8b-instant"
-    case llama33_70bVersatile = "llama-3.3-70b-versatile"
+nonisolated enum GroqModel: String, CaseIterable, Identifiable, Sendable {
+  case llama31_8bInstant = "llama-3.1-8b-instant"
+  case llama33_70bVersatile = "llama-3.3-70b-versatile"
 
-    var id: String { rawValue }
+  var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .llama31_8bInstant:
-            return "Llama 3.1 8B (Fast)"
-        case .llama33_70bVersatile:
-            return "Llama 3.3 70B (Balanced)"
-        }
+  var title: String {
+    switch self {
+    case .llama31_8bInstant:
+      return "Llama 3.1 8B (Fast)"
+    case .llama33_70bVersatile:
+      return "Llama 3.3 70B (Balanced)"
     }
+  }
 
-    static func from(rawValue: String) -> GroqModel {
-        GroqModel(rawValue: rawValue) ?? .llama31_8bInstant
-    }
+  static func from(rawValue: String) -> GroqModel {
+    GroqModel(rawValue: rawValue) ?? .llama31_8bInstant
+  }
 }

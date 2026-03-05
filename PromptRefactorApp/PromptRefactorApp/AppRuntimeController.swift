@@ -15,7 +15,8 @@ final class AppRuntimeController: ObservableObject {
   let updateChecker: UpdateChecker
 
   private let refactorService: PromptRefactorService
-  private let hotkeyService: any HotkeyService
+  private let refactorHotkeyService: any HotkeyService
+  private let styleSwitchHotkeyService: any HotkeyService
   private let clipboardService: any ClipboardService
   private let textCommandService: any TextCommandService
   private let kittyRemoteControlService: any KittyRemoteControlService
@@ -26,6 +27,7 @@ final class AppRuntimeController: ObservableObject {
   private let frontmostBundleIdentifierProvider: () -> String?
   private let pasteMonitorService: any PasteMonitorService
   private let soundCueService: SoundCueService
+  private let promptStyleHUDPresenter: any PromptStyleHUDPresenting
   private var cancellables: Set<AnyCancellable> = []
   private var activeRefactorTask: Task<Void, Never>?
   private var pendingPasteTask: Task<Void, Never>?
@@ -35,7 +37,8 @@ final class AppRuntimeController: ObservableObject {
     self.settingsStore = store
     self.updateChecker = UpdateChecker()
     self.refactorService = PromptRefactorService()
-    self.hotkeyService = GlobalHotkeyService()
+    self.refactorHotkeyService = GlobalHotkeyService()
+    self.styleSwitchHotkeyService = GlobalHotkeyService()
     self.clipboardService = PasteboardClipboardService()
     self.textCommandService = DefaultTextCommandService()
     self.kittyRemoteControlService = DefaultKittyRemoteControlService()
@@ -48,9 +51,10 @@ final class AppRuntimeController: ObservableObject {
     }
     self.pasteMonitorService = CGEventPasteMonitorService()
     self.soundCueService = SoundCueService(isEnabled: { store.settings.soundCuesEnabled })
+    self.promptStyleHUDPresenter = PromptStyleHUDPresenter()
 
-    configureHotkey()
-    observeShortcutChanges()
+    configureHotkeys()
+    observeHotkeyChanges()
     refreshGroqAPIKeyState()
     refreshAccessibilityState()
     configurePasteMonitor()
@@ -61,7 +65,8 @@ final class AppRuntimeController: ObservableObject {
   init(
     settingsStore: UserDefaultsAppSettingsStore,
     refactorService: PromptRefactorService,
-    hotkeyService: any HotkeyService,
+    refactorHotkeyService: any HotkeyService,
+    styleSwitchHotkeyService: any HotkeyService,
     clipboardService: any ClipboardService,
     textCommandService: any TextCommandService,
     kittyRemoteControlService: any KittyRemoteControlService,
@@ -72,12 +77,14 @@ final class AppRuntimeController: ObservableObject {
     frontmostBundleIdentifierProvider: @escaping () -> String?,
     pasteMonitorService: (any PasteMonitorService)? = nil,
     soundCueService: SoundCueService? = nil,
-    updateChecker: UpdateChecker? = nil
+    updateChecker: UpdateChecker? = nil,
+    promptStyleHUDPresenter: (any PromptStyleHUDPresenting)? = nil
   ) {
     self.settingsStore = settingsStore
     self.updateChecker = updateChecker ?? UpdateChecker()
     self.refactorService = refactorService
-    self.hotkeyService = hotkeyService
+    self.refactorHotkeyService = refactorHotkeyService
+    self.styleSwitchHotkeyService = styleSwitchHotkeyService
     self.clipboardService = clipboardService
     self.textCommandService = textCommandService
     self.kittyRemoteControlService = kittyRemoteControlService
@@ -90,9 +97,10 @@ final class AppRuntimeController: ObservableObject {
     self.soundCueService =
       soundCueService
       ?? SoundCueService(isEnabled: { settingsStore.settings.soundCuesEnabled })
+    self.promptStyleHUDPresenter = promptStyleHUDPresenter ?? PromptStyleHUDPresenter()
 
-    configureHotkey()
-    observeShortcutChanges()
+    configureHotkeys()
+    observeHotkeyChanges()
     refreshGroqAPIKeyState()
     refreshAccessibilityState()
     configurePasteMonitor()
@@ -105,6 +113,35 @@ final class AppRuntimeController: ObservableObject {
     activeRefactorTask = Task { [weak self] in
       await self?.performRefactorNow()
     }
+  }
+
+  func cyclePromptStyle(direction: PromptStyleHUDDirection = .forward) {
+    let settings = settingsStore.settings
+    let choices = buildPromptStyleChoices(customPromptStyles: settings.customPromptStyles)
+    guard !choices.isEmpty else {
+      return
+    }
+
+    let currentIndex =
+      choices.firstIndex { $0.selection == settings.promptStyleSelection }
+      ?? 0
+
+    let nextIndex: Int
+    switch direction {
+    case .forward:
+      nextIndex = (currentIndex + 1) % choices.count
+    case .backward:
+      nextIndex = (currentIndex - 1 + choices.count) % choices.count
+    }
+
+    let nextChoice = choices[nextIndex]
+    settingsStore.updatePromptStyleSelection(nextChoice.selection)
+    promptStyleHUDPresenter.present(
+      choices: choices,
+      selectedIndex: nextIndex,
+      direction: direction
+    )
+    status = "Prompt style set to \(nextChoice.title)"
   }
 
   func requestAccessibilityAccess() {
@@ -521,23 +558,70 @@ final class AppRuntimeController: ObservableObject {
     isAccessibilityTrusted = permissionService.isTrusted()
   }
 
-  private func configureHotkey() {
-    hotkeyService.startListening(binding: settingsStore.settings.activeShortcutBinding) {
-      [weak self] in
+  private func configureHotkeys() {
+    let settings = settingsStore.settings
+    configureRefactorHotkey(binding: settings.activeShortcutBinding)
+    configureStyleSwitchHotkey(
+      refactorBinding: settings.activeShortcutBinding,
+      styleBinding: settings.styleSwitchShortcutBinding
+    )
+  }
+
+  private func observeHotkeyChanges() {
+    settingsStore.$settings
+      .map(\.activeShortcutBinding)
+      .removeDuplicates()
+      .sink { [weak self] binding in
+        guard let self else {
+          return
+        }
+
+        self.configureRefactorHotkey(binding: binding)
+        self.configureStyleSwitchHotkey(
+          refactorBinding: binding,
+          styleBinding: self.settingsStore.settings.styleSwitchShortcutBinding
+        )
+      }
+      .store(in: &cancellables)
+
+    settingsStore.$settings
+      .map(\.styleSwitchShortcutBinding)
+      .removeDuplicates()
+      .sink { [weak self] binding in
+        guard let self else {
+          return
+        }
+
+        self.configureStyleSwitchHotkey(
+          refactorBinding: self.settingsStore.settings.activeShortcutBinding,
+          styleBinding: binding
+        )
+      }
+      .store(in: &cancellables)
+  }
+
+  private func configureRefactorHotkey(binding: HotkeyBinding) {
+    refactorHotkeyService.startListening(binding: binding) { [weak self] in
       Task { @MainActor in
         self?.refactorNow()
       }
     }
   }
 
-  private func observeShortcutChanges() {
-    settingsStore.$settings
-      .map(\.activeShortcutBinding)
-      .removeDuplicates()
-      .sink { [weak self] binding in
-        self?.hotkeyService.updateBinding(binding)
+  private func configureStyleSwitchHotkey(
+    refactorBinding: HotkeyBinding,
+    styleBinding: HotkeyBinding
+  ) {
+    guard refactorBinding != styleBinding else {
+      styleSwitchHotkeyService.stopListening()
+      return
+    }
+
+    styleSwitchHotkeyService.startListening(binding: styleBinding) { [weak self] in
+      Task { @MainActor in
+        self?.cyclePromptStyle()
       }
-      .store(in: &cancellables)
+    }
   }
 
   private func refreshGroqAPIKeyState() {

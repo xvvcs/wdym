@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import PromptRefactorCore
@@ -17,6 +18,8 @@ struct AppSettings: Equatable {
   var useCustomShortcut: Bool
   var customShortcutKeyCode: UInt16
   var customShortcutModifiersRawValue: UInt
+  var styleSwitchShortcutKeyCode: UInt16
+  var styleSwitchShortcutModifiersRawValue: UInt
   var autoRefactorOnPaste: Bool
   var pasteMonitorAllowedBundleIDs: [String]
   var soundCuesEnabled: Bool
@@ -37,6 +40,11 @@ struct AppSettings: Equatable {
     useCustomShortcut: false,
     customShortcutKeyCode: ShortcutPreset.commandShiftR.binding.keyCode,
     customShortcutModifiersRawValue: ShortcutPreset.commandShiftR.binding.modifiersRawValue,
+    styleSwitchShortcutKeyCode: 30,
+    styleSwitchShortcutModifiersRawValue: HotkeyBinding(
+      keyCode: 30,
+      modifiers: [.command, .control]
+    ).modifiersRawValue,
     autoRefactorOnPaste: false,
     pasteMonitorAllowedBundleIDs: [],
     soundCuesEnabled: true,
@@ -54,6 +62,13 @@ struct AppSettings: Equatable {
 
   var activeShortcutBinding: HotkeyBinding {
     useCustomShortcut ? customShortcutBinding : shortcutPreset.binding
+  }
+
+  var styleSwitchShortcutBinding: HotkeyBinding {
+    HotkeyBinding(
+      keyCode: styleSwitchShortcutKeyCode,
+      modifiersRawValue: styleSwitchShortcutModifiersRawValue
+    )
   }
 
   var promptStyleSelection: PromptStyleSelection {
@@ -262,6 +277,13 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     }
   }
 
+  func updateStyleSwitchShortcut(_ binding: HotkeyBinding) {
+    updateSettings {
+      $0.styleSwitchShortcutKeyCode = binding.keyCode
+      $0.styleSwitchShortcutModifiersRawValue = binding.modifiersRawValue
+    }
+  }
+
   func updateGroqModelRawValue(_ value: String) {
     updateSettings {
       $0.groqModelRawValue = value
@@ -320,6 +342,12 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(settings.useCustomShortcut, forKey: Keys.useCustomShortcut)
     userDefaults.set(Int(settings.customShortcutKeyCode), forKey: Keys.customShortcutKeyCode)
     userDefaults.set(settings.customShortcutModifiersRawValue, forKey: Keys.customShortcutModifiers)
+    userDefaults.set(
+      Int(settings.styleSwitchShortcutKeyCode), forKey: Keys.styleSwitchShortcutKeyCode)
+    userDefaults.set(
+      settings.styleSwitchShortcutModifiersRawValue,
+      forKey: Keys.styleSwitchShortcutModifiers
+    )
     userDefaults.set(settings.autoRefactorOnPaste, forKey: Keys.autoRefactorOnPaste)
     userDefaults.set(
       settings.pasteMonitorAllowedBundleIDs, forKey: Keys.pasteMonitorAllowedBundleIDs)
@@ -393,6 +421,16 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       ? AppSettings.default.customShortcutModifiersRawValue
       : UInt(userDefaults.integer(forKey: Keys.customShortcutModifiers))
 
+    let styleSwitchShortcutKeyCode =
+      userDefaults.object(forKey: Keys.styleSwitchShortcutKeyCode) == nil
+      ? AppSettings.default.styleSwitchShortcutKeyCode
+      : UInt16(clamping: userDefaults.integer(forKey: Keys.styleSwitchShortcutKeyCode))
+
+    let styleSwitchShortcutModifiersRawValue =
+      userDefaults.object(forKey: Keys.styleSwitchShortcutModifiers) == nil
+      ? AppSettings.default.styleSwitchShortcutModifiersRawValue
+      : UInt(userDefaults.integer(forKey: Keys.styleSwitchShortcutModifiers))
+
     let autoRefactorOnPaste =
       userDefaults.object(forKey: Keys.autoRefactorOnPaste) == nil
       ? AppSettings.default.autoRefactorOnPaste
@@ -427,6 +465,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       useCustomShortcut: useCustomShortcut,
       customShortcutKeyCode: customShortcutKeyCode,
       customShortcutModifiersRawValue: customShortcutModifiersRawValue,
+      styleSwitchShortcutKeyCode: styleSwitchShortcutKeyCode,
+      styleSwitchShortcutModifiersRawValue: styleSwitchShortcutModifiersRawValue,
       autoRefactorOnPaste: autoRefactorOnPaste,
       pasteMonitorAllowedBundleIDs: pasteMonitorAllowedBundleIDs,
       soundCuesEnabled: soundCuesEnabled,
@@ -520,6 +560,8 @@ private enum Keys {
   static let useCustomShortcut = "useCustomShortcut"
   static let customShortcutKeyCode = "customShortcutKeyCode"
   static let customShortcutModifiers = "customShortcutModifiers"
+  static let styleSwitchShortcutKeyCode = "styleSwitchShortcutKeyCode"
+  static let styleSwitchShortcutModifiers = "styleSwitchShortcutModifiers"
   static let autoRefactorOnPaste = "autoRefactorOnPaste"
   static let pasteMonitorAllowedBundleIDs = "pasteMonitorAllowedBundleIDs"
   static let soundCuesEnabled = "soundCuesEnabled"
