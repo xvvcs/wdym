@@ -27,8 +27,10 @@ struct PromptRefactorAppApp: App {
     .menuBarExtraStyle(.window)
 
     WindowGroup("Options", id: "options") {
-      OptionsView(runtime: runtime, settingsStore: runtime.settingsStore, updateChecker: runtime.updateChecker)
-        .frame(minWidth: 520, minHeight: 460)
+      OptionsView(
+        runtime: runtime, settingsStore: runtime.settingsStore, updateChecker: runtime.updateChecker
+      )
+      .frame(minWidth: 660, minHeight: 560)
     }
 
     WindowGroup("Setup", id: "setup") {
@@ -166,21 +168,81 @@ private struct OptionsView: View {
   @ObservedObject var settingsStore: UserDefaultsAppSettingsStore
   @ObservedObject var updateChecker: UpdateChecker
   @StateObject private var shortcutRecorder = ShortcutRecorder()
+  @Namespace private var optionsTabSelection
+  @State private var selectedTab: OptionsTab = .general
+  @State private var newCustomPromptStyle = CustomPromptStyleDraft()
+  @State private var customPromptStyleFeedback = ""
+  @State private var editingCustomPromptStyle: CustomPromptStyleDraft?
 
   var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      tabSwitcher
+
+      VStack(alignment: .leading, spacing: 6) {
+        Text("Prompt Refactor Options")
+          .font(.title3)
+          .fontWeight(.semibold)
+          .foregroundStyle(.white)
+
+        Text("Settings are saved automatically.")
+          .font(.subheadline)
+          .foregroundStyle(Color.white.opacity(0.62))
+      }
+
+      selectedTabContent
+        .id(selectedTab)
+        .transition(
+          .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .bottom)),
+            removal: .opacity
+          )
+        )
+    }
+    .padding(20)
+    .frame(maxWidth: 840, alignment: .leading)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .preferredColorScheme(.dark)
+    .animation(.spring(response: 0.28, dampingFraction: 0.88), value: selectedTab)
+    .background(
+      LinearGradient(
+        colors: [Color.black.opacity(0.95), Color.black.opacity(0.85)],
+        startPoint: .top,
+        endPoint: .bottom
+      )
+      .ignoresSafeArea()
+    )
+    .onDisappear {
+      shortcutRecorder.stopRecording()
+    }
+  }
+
+  private var tabSwitcher: some View {
+    HStack(spacing: 4) {
+      ForEach(OptionsTab.allCases) { tab in
+        Button {
+          selectedTab = tab
+        } label: {
+          optionsTabButtonLabel(for: tab)
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(.top, 2)
+  }
+
+  @ViewBuilder
+  private var selectedTabContent: some View {
+    switch selectedTab {
+    case .general:
+      generalTabContent
+    case .customization:
+      customizationTabContent
+    }
+  }
+
+  private var generalTabContent: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        VStack(alignment: .leading, spacing: 6) {
-          Text("Prompt Refactor Options")
-            .font(.title3)
-            .fontWeight(.semibold)
-            .foregroundStyle(.white)
-
-          Text("Settings are saved automatically.")
-            .font(.subheadline)
-            .foregroundStyle(Color.white.opacity(0.62))
-        }
-
         settingsCard(
           title: "Refactor Behavior", subtitle: "How prompts are captured and transformed"
         ) {
@@ -198,8 +260,8 @@ private struct OptionsView: View {
 
           settingRow(label: "Prompt style") {
             Picker("Prompt style", selection: promptStyleBinding) {
-              ForEach(PromptStyle.allCases, id: \.rawValue) { style in
-                Text(style.displayTitle).tag(style.rawValue)
+              ForEach(promptStyleOptions) { option in
+                Text(option.title).tag(option.id)
               }
             }
             .accessibilityIdentifier("options.picker.promptStyle")
@@ -398,23 +460,59 @@ private struct OptionsView: View {
           .accessibilityIdentifier("options.button.checkForUpdates")
         }
       }
-      .padding(20)
-      .frame(maxWidth: 760, alignment: .leading)
-      .frame(maxWidth: .infinity, alignment: .topLeading)
-      .preferredColorScheme(.dark)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.bottom, 6)
     }
     .scrollIndicators(.visible)
-    .background(
-      LinearGradient(
-        colors: [Color.black.opacity(0.95), Color.black.opacity(0.85)],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
-    )
-    .onDisappear {
-      shortcutRecorder.stopRecording()
+  }
+
+  private var customizationTabContent: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        settingsCard(
+          title: "Custom Prompt Styles",
+          subtitle: "Create reusable style instructions for your prompt refactors"
+        ) {
+          TextField("Style name", text: $newCustomPromptStyle.name)
+            .accessibilityIdentifier("options.field.customStyleName")
+            .modifier(DarkFieldStyle())
+
+          TextEditor(text: $newCustomPromptStyle.prompt)
+            .accessibilityIdentifier("options.field.customStylePrompt")
+            .modifier(DarkPromptEditorStyle(minHeight: 120))
+
+          HStack(spacing: 10) {
+            Button("Add Prompt Style") {
+              addCustomPromptStyle()
+            }
+            .accessibilityIdentifier("options.button.addCustomStyle")
+            .buttonStyle(OutlineActionButtonStyle())
+
+            Text(customPromptStyleFeedback)
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.72))
+              .lineLimit(2)
+          }
+
+          Divider()
+
+          if settingsStore.settings.customPromptStyles.isEmpty {
+            Text("No custom styles yet. Add one to see it in the Prompt style menu.")
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.62))
+          } else {
+            VStack(alignment: .leading, spacing: 10) {
+              ForEach(settingsStore.settings.customPromptStyles) { style in
+                customPromptStyleCard(for: style)
+              }
+            }
+          }
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.bottom, 6)
     }
+    .scrollIndicators(.visible)
   }
 
   private func settingsCard<Content: View>(
@@ -467,11 +565,25 @@ private struct OptionsView: View {
     )
   }
 
-  private var promptStyleBinding: Binding<String> {
+  private var promptStyleBinding: Binding<PromptStyleSelection> {
     Binding(
-      get: { settingsStore.settings.promptStyleRawValue },
-      set: { settingsStore.updatePromptStyleRawValue($0) }
+      get: { settingsStore.settings.promptStyleSelection },
+      set: { settingsStore.updatePromptStyleSelection($0) }
     )
+  }
+
+  private var promptStyleOptions: [PromptStyleOption] {
+    let builtIn = PromptStyle.allCases.map {
+      PromptStyleOption(selection: .builtIn($0), title: $0.displayTitle)
+    }
+    let custom = settingsStore.settings.customPromptStyles.map {
+      PromptStyleOption(
+        selection: .custom(name: $0.name),
+        title: "\($0.name) (Custom)"
+      )
+    }
+
+    return builtIn + custom
   }
 
   private var shortcutPresetBinding: Binding<String> {
@@ -561,6 +673,294 @@ private struct OptionsView: View {
       settingsStore.updateCustomShortcut(binding)
       settingsStore.updateUseCustomShortcut(true)
     }
+  }
+
+  private func addCustomPromptStyle() {
+    let result = settingsStore.addCustomPromptStyle(
+      name: newCustomPromptStyle.name,
+      prompt: newCustomPromptStyle.prompt
+    )
+
+    switch result {
+    case .added(let style):
+      newCustomPromptStyle = CustomPromptStyleDraft()
+      clearEditingCustomPromptStyle()
+      settingsStore.updatePromptStyleSelection(.custom(name: style.name))
+      customPromptStyleFeedback = "Added \(style.name) and selected it."
+    case .invalidName:
+      customPromptStyleFeedback = "Enter a non-empty style name."
+    case .invalidPrompt:
+      customPromptStyleFeedback = "Enter non-empty prompt instructions."
+    case .duplicateName:
+      customPromptStyleFeedback = "A style with this name already exists."
+    }
+  }
+
+  private func customPromptStyleCard(for style: CustomPromptStyle) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      if isEditingCustomPromptStyle(style) {
+        TextField("Style name", text: editingCustomPromptStyleNameBinding)
+          .modifier(DarkFieldStyle())
+
+        TextEditor(text: editingCustomPromptStylePromptBinding)
+          .modifier(DarkPromptEditorStyle(minHeight: 100))
+
+        HStack(spacing: 8) {
+          Button("Save") {
+            saveEditingCustomPromptStyle()
+          }
+          .buttonStyle(OutlineActionButtonStyle())
+
+          Button("Cancel") {
+            clearEditingCustomPromptStyle()
+          }
+          .buttonStyle(OutlineActionButtonStyle())
+
+          Button("Remove") {
+            removeCustomPromptStyle(style.name)
+          }
+          .buttonStyle(DangerOutlineButtonStyle())
+        }
+      } else {
+        HStack(alignment: .top, spacing: 10) {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(style.name)
+              .font(.subheadline)
+              .fontWeight(.semibold)
+              .foregroundStyle(.white)
+
+            Text(style.prompt)
+              .font(.caption)
+              .foregroundStyle(Color.white.opacity(0.72))
+              .lineLimit(3)
+          }
+          .contentShape(Rectangle())
+          .onTapGesture {
+            beginEditingCustomPromptStyle(style)
+          }
+
+          Spacer(minLength: 0)
+
+          HStack(spacing: 8) {
+            Button(isCustomStyleSelected(style.name) ? "Selected" : "Use") {
+              settingsStore.updatePromptStyleSelection(.custom(name: style.name))
+              customPromptStyleFeedback = "Prompt style set to \(style.name)."
+            }
+            .buttonStyle(OutlineActionButtonStyle())
+            .disabled(isCustomStyleSelected(style.name))
+
+            Button("Remove") {
+              removeCustomPromptStyle(style.name)
+            }
+            .buttonStyle(DangerOutlineButtonStyle())
+          }
+        }
+      }
+    }
+    .padding(10)
+    .background(
+      RoundedRectangle(cornerRadius: 10)
+        .fill(Color.white.opacity(0.05))
+        .overlay(
+          RoundedRectangle(cornerRadius: 10)
+            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    )
+  }
+
+  private func beginEditingCustomPromptStyle(_ style: CustomPromptStyle) {
+    editingCustomPromptStyle = CustomPromptStyleDraft(style: style)
+    customPromptStyleFeedback = "Editing \(style.name)."
+  }
+
+  private func saveEditingCustomPromptStyle() {
+    guard
+      let editingCustomPromptStyle,
+      let originalName = editingCustomPromptStyle.originalName
+    else {
+      return
+    }
+
+    let result = settingsStore.updateCustomPromptStyle(
+      originalName: originalName,
+      name: editingCustomPromptStyle.name,
+      prompt: editingCustomPromptStyle.prompt
+    )
+
+    switch result {
+    case .updated(let style):
+      customPromptStyleFeedback = "Saved \(style.name)."
+      clearEditingCustomPromptStyle()
+    case .invalidName:
+      customPromptStyleFeedback = "Enter a non-empty style name."
+    case .invalidPrompt:
+      customPromptStyleFeedback = "Enter non-empty prompt instructions."
+    case .duplicateName:
+      customPromptStyleFeedback = "A style with this name already exists."
+    case .notFound:
+      customPromptStyleFeedback = "Style no longer exists."
+      clearEditingCustomPromptStyle()
+    }
+  }
+
+  private func removeCustomPromptStyle(_ name: String) {
+    let removed = settingsStore.removeCustomPromptStyle(named: name)
+    if removed {
+      customPromptStyleFeedback = "Removed \(name)."
+      if editingCustomPromptStyle?.matches(name: name) == true {
+        clearEditingCustomPromptStyle()
+      }
+      return
+    }
+
+    customPromptStyleFeedback = "Style no longer exists."
+  }
+
+  private func clearEditingCustomPromptStyle() {
+    editingCustomPromptStyle = nil
+  }
+
+  private func isEditingCustomPromptStyle(_ style: CustomPromptStyle) -> Bool {
+    editingCustomPromptStyle?.matches(style) == true
+  }
+
+  private func isCustomStyleSelected(_ name: String) -> Bool {
+    settingsStore.settings.promptStyleSelection == .custom(name: name)
+  }
+
+  private var editingCustomPromptStyleNameBinding: Binding<String> {
+    Binding(
+      get: { editingCustomPromptStyle?.name ?? "" },
+      set: { newValue in
+        guard var draft = editingCustomPromptStyle else {
+          return
+        }
+
+        draft.name = newValue
+        editingCustomPromptStyle = draft
+      }
+    )
+  }
+
+  private var editingCustomPromptStylePromptBinding: Binding<String> {
+    Binding(
+      get: { editingCustomPromptStyle?.prompt ?? "" },
+      set: { newValue in
+        guard var draft = editingCustomPromptStyle else {
+          return
+        }
+
+        draft.prompt = newValue
+        editingCustomPromptStyle = draft
+      }
+    )
+  }
+
+  private func optionsTabButtonLabel(for tab: OptionsTab) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(tab.title)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(selectedTab == tab ? .white : Color.white.opacity(0.62))
+    }
+    .padding(.horizontal, 12)
+    .padding(.top, 7)
+    .padding(.bottom, 7)
+    .frame(minWidth: 92, alignment: .leading)
+    .background {
+      ZStack {
+        UnevenRoundedRectangle(
+          cornerRadii: .init(
+            topLeading: 10,
+            bottomLeading: 0,
+            bottomTrailing: 0,
+            topTrailing: 10
+          )
+        )
+        .fill(selectedTab == tab ? Color.white.opacity(0.08) : Color.white.opacity(0.025))
+
+        if selectedTab == tab {
+          UnevenRoundedRectangle(
+            cornerRadii: .init(
+              topLeading: 10,
+              bottomLeading: 0,
+              bottomTrailing: 0,
+              topTrailing: 10
+            )
+          )
+          .fill(Color.white.opacity(0.1))
+          .matchedGeometryEffect(id: "options-tab-selection", in: optionsTabSelection)
+        }
+      }
+    }
+    .overlay {
+      UnevenRoundedRectangle(
+        cornerRadii: .init(
+          topLeading: 10,
+          bottomLeading: 0,
+          bottomTrailing: 0,
+          topTrailing: 10
+        )
+      )
+      .stroke(
+        selectedTab == tab ? Color.white.opacity(0.14) : Color.white.opacity(0.06),
+        lineWidth: 1
+      )
+    }
+  }
+}
+
+private enum OptionsTab: CaseIterable, Hashable, Identifiable {
+  case general
+  case customization
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .general:
+      return "General"
+    case .customization:
+      return "Customization"
+    }
+  }
+}
+
+private struct PromptStyleOption: Identifiable {
+  let selection: PromptStyleSelection
+  let title: String
+
+  var id: PromptStyleSelection {
+    selection
+  }
+}
+
+private struct CustomPromptStyleDraft {
+  var originalName: String?
+  var name = ""
+  var prompt = ""
+
+  init() {}
+
+  init(style: CustomPromptStyle) {
+    originalName = style.name
+    name = style.name
+    prompt = style.prompt
+  }
+
+  func matches(_ style: CustomPromptStyle) -> Bool {
+    guard let originalName else {
+      return false
+    }
+
+    return style.matches(name: originalName)
+  }
+
+  func matches(name: String) -> Bool {
+    guard let originalName else {
+      return false
+    }
+
+    return originalName.caseInsensitiveCompare(name) == .orderedSame
   }
 }
 
@@ -687,6 +1087,44 @@ private struct OutlineActionButtonStyle: ButtonStyle {
           .overlay(
             RoundedRectangle(cornerRadius: 8)
               .stroke(Color.white.opacity(0.2), lineWidth: 1)
+          )
+      )
+  }
+}
+
+private struct DangerOutlineButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 12, weight: .medium))
+      .foregroundStyle(Color.red.opacity(configuration.isPressed ? 0.75 : 0.95))
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background(
+        RoundedRectangle(cornerRadius: 8)
+          .fill(Color.red.opacity(configuration.isPressed ? 0.2 : 0.1))
+          .overlay(
+            RoundedRectangle(cornerRadius: 8)
+              .stroke(Color.red.opacity(0.4), lineWidth: 1)
+          )
+      )
+  }
+}
+
+private struct DarkPromptEditorStyle: ViewModifier {
+  let minHeight: CGFloat
+
+  func body(content: Content) -> some View {
+    content
+      .frame(minHeight: minHeight)
+      .font(.system(size: 13))
+      .scrollContentBackground(.hidden)
+      .padding(8)
+      .background(
+        RoundedRectangle(cornerRadius: 8)
+          .fill(Color.white.opacity(0.08))
+          .overlay(
+            RoundedRectangle(cornerRadius: 8)
+              .stroke(Color.white.opacity(0.16), lineWidth: 1)
           )
       )
   }

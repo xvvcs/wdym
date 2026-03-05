@@ -83,3 +83,37 @@ import Testing
     #expect(service.clarifyPrompt("") == "")
     #expect(service.clarifyPrompt("   ") == "")
 }
+
+@Test func buildPromptUsesCustomStylePromptInsteadOfBuiltInInstructions() {
+    let service = PromptRefactorService()
+    let result = service.buildPrompt(
+        from: "draft an api client for my service",
+        options: RefactorBuildOptions(
+            style: .coding,
+            customStylePrompt: "Output a short checklist with risks first, then implementation details."
+        )
+    )
+
+    #expect(result.contains("Output a short checklist with risks first, then implementation details."))
+    #expect(!result.contains("Prefer technical precision and explicit implementation constraints."))
+}
+
+@Test func buildPromptFallsBackToBuiltInStyleWhenCustomPromptIsEmpty() {
+    let service = PromptRefactorService()
+    let result = service.buildPrompt(
+        from: "draft an api client for my service",
+        options: RefactorBuildOptions(style: .coding, customStylePrompt: "   ")
+    )
+
+    #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
+}
+
+@Test func buildPromptFallsBackToBuiltInStyleWhenCustomPromptIsNil() {
+    let service = PromptRefactorService()
+    let result = service.buildPrompt(
+        from: "draft an api client for my service",
+        options: RefactorBuildOptions(style: .coding, customStylePrompt: nil)
+    )
+
+    #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
+}

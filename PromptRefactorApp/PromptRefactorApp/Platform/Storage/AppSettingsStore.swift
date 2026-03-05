@@ -5,6 +5,7 @@ import PromptRefactorCore
 struct AppSettings: Equatable {
   var outputModeRawValue: String
   var promptStyleRawValue: String
+  var customPromptStyles: [CustomPromptStyle]
   var includeClarifyingQuestions: Bool
   var terminalModeEnabled: Bool
   var autoSelectAllOnTrigger: Bool
@@ -24,6 +25,7 @@ struct AppSettings: Equatable {
   static let `default` = AppSettings(
     outputModeRawValue: OutputMode.replaceAndCopy.rawValue,
     promptStyleRawValue: PromptStyle.general.rawValue,
+    customPromptStyles: [],
     includeClarifyingQuestions: true,
     terminalModeEnabled: true,
     autoSelectAllOnTrigger: true,
@@ -46,20 +48,41 @@ struct AppSettings: Equatable {
   }
 
   var customShortcutBinding: HotkeyBinding {
-    HotkeyBinding(keyCode: customShortcutKeyCode, modifiersRawValue: customShortcutModifiersRawValue)
+    HotkeyBinding(
+      keyCode: customShortcutKeyCode, modifiersRawValue: customShortcutModifiersRawValue)
   }
 
   var activeShortcutBinding: HotkeyBinding {
     useCustomShortcut ? customShortcutBinding : shortcutPreset.binding
   }
 
+  var promptStyleSelection: PromptStyleSelection {
+    refactorPreferences.promptStyleSelection
+  }
+
   var refactorPreferences: AppRefactorPreferences {
     AppRefactorPreferences(
       outputModeRawValue: outputModeRawValue,
       promptStyleRawValue: promptStyleRawValue,
-      includeClarifyingQuestions: includeClarifyingQuestions
+      includeClarifyingQuestions: includeClarifyingQuestions,
+      customPromptStyles: customPromptStyles
     )
   }
+}
+
+enum AddCustomPromptStyleResult: Equatable {
+  case added(CustomPromptStyle)
+  case invalidName
+  case invalidPrompt
+  case duplicateName
+}
+
+enum UpdateCustomPromptStyleResult: Equatable {
+  case updated(CustomPromptStyle)
+  case notFound
+  case invalidName
+  case invalidPrompt
+  case duplicateName
 }
 
 final class UserDefaultsAppSettingsStore: ObservableObject {
@@ -79,9 +102,107 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
   }
 
   func updatePromptStyleRawValue(_ value: String) {
-    updateSettings {
-      $0.promptStyleRawValue = value
+    updateSettings { settings in
+      settings.promptStyleRawValue = value
+      Self.normalizePromptStyleSelection(&settings)
     }
+  }
+
+  @discardableResult
+  func addCustomPromptStyle(name: String, prompt: String) -> AddCustomPromptStyleResult {
+    let customPromptStyle: CustomPromptStyle
+    switch Self.validatedCustomPromptStyle(name: name, prompt: prompt) {
+    case .valid(let style):
+      customPromptStyle = style
+    case .invalidName:
+      return .invalidName
+    case .invalidPrompt:
+      return .invalidPrompt
+    }
+
+    guard !settings.customPromptStyles.containsStyle(named: customPromptStyle.name) else {
+      return .duplicateName
+    }
+
+    updateSettings { settings in
+      settings.customPromptStyles.append(customPromptStyle)
+      Self.normalizePromptStyleSelection(&settings)
+    }
+
+    return .added(customPromptStyle)
+  }
+
+  @discardableResult
+  func updateCustomPromptStyle(
+    originalName: String,
+    name: String,
+    prompt: String
+  ) -> UpdateCustomPromptStyleResult {
+    guard let sanitizedOriginalName = Self.sanitizedCustomPromptStyleName(originalName) else {
+      return .notFound
+    }
+
+    let customPromptStyle: CustomPromptStyle
+    switch Self.validatedCustomPromptStyle(name: name, prompt: prompt) {
+    case .valid(let style):
+      customPromptStyle = style
+    case .invalidName:
+      return .invalidName
+    case .invalidPrompt:
+      return .invalidPrompt
+    }
+
+    guard let index = settings.customPromptStyles.firstIndexOfStyle(named: sanitizedOriginalName)
+    else {
+      return .notFound
+    }
+
+    guard
+      !settings.customPromptStyles.containsStyle(
+        named: customPromptStyle.name,
+        excluding: index
+      )
+    else {
+      return .duplicateName
+    }
+
+    updateSettings { settings in
+      let previousName = settings.customPromptStyles[index].name
+      settings.customPromptStyles[index] = customPromptStyle
+
+      if case .custom(let selectedName) = settings.promptStyleSelection,
+        previousName.caseInsensitiveCompare(selectedName) == .orderedSame
+      {
+        settings.promptStyleRawValue =
+          PromptStyleSelection.custom(name: customPromptStyle.name).rawValue
+      }
+
+      Self.normalizePromptStyleSelection(&settings)
+    }
+
+    return .updated(customPromptStyle)
+  }
+
+  @discardableResult
+  func removeCustomPromptStyle(named name: String) -> Bool {
+    guard let sanitizedName = Self.sanitizedCustomPromptStyleName(name) else {
+      return false
+    }
+
+    guard settings.customPromptStyles.containsStyle(named: sanitizedName) else {
+      return false
+    }
+
+    updateSettings { settings in
+      settings.customPromptStyles.removeAll { $0.matches(name: sanitizedName) }
+      Self.normalizePromptStyleSelection(&settings)
+    }
+
+    return true
+  }
+
+  func updatePromptStyleSelection(_ selection: PromptStyleSelection) {
+    updatePromptStyleRawValue(selection.rawValue)
   }
 
   func updateIncludeClarifyingQuestions(_ value: Bool) {
@@ -186,6 +307,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
   private func persist(_ settings: AppSettings) {
     userDefaults.set(settings.outputModeRawValue, forKey: Keys.outputMode)
     userDefaults.set(settings.promptStyleRawValue, forKey: Keys.promptStyle)
+    userDefaults.set(
+      encodeCustomPromptStyles(settings.customPromptStyles), forKey: Keys.customPromptStyles)
     userDefaults.set(settings.includeClarifyingQuestions, forKey: Keys.includeClarifyingQuestions)
     userDefaults.set(settings.terminalModeEnabled, forKey: Keys.terminalModeEnabled)
     userDefaults.set(settings.autoSelectAllOnTrigger, forKey: Keys.autoSelectAllOnTrigger)
@@ -198,7 +321,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
     userDefaults.set(Int(settings.customShortcutKeyCode), forKey: Keys.customShortcutKeyCode)
     userDefaults.set(settings.customShortcutModifiersRawValue, forKey: Keys.customShortcutModifiers)
     userDefaults.set(settings.autoRefactorOnPaste, forKey: Keys.autoRefactorOnPaste)
-    userDefaults.set(settings.pasteMonitorAllowedBundleIDs, forKey: Keys.pasteMonitorAllowedBundleIDs)
+    userDefaults.set(
+      settings.pasteMonitorAllowedBundleIDs, forKey: Keys.pasteMonitorAllowedBundleIDs)
     userDefaults.set(settings.soundCuesEnabled, forKey: Keys.soundCuesEnabled)
     userDefaults.set(settings.checkForUpdatesEnabled, forKey: Keys.checkForUpdatesEnabled)
   }
@@ -208,6 +332,14 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       userDefaults.string(forKey: Keys.outputMode) ?? AppSettings.default.outputModeRawValue
     let promptStyle =
       userDefaults.string(forKey: Keys.promptStyle) ?? AppSettings.default.promptStyleRawValue
+
+    let customPromptStyles = decodeCustomPromptStyles(
+      userDefaults.data(forKey: Keys.customPromptStyles)
+    )
+    let normalizedPromptStyle = normalizedPromptStyleRawValue(
+      promptStyle,
+      customPromptStyles: customPromptStyles
+    )
 
     let includeClarifyingQuestions =
       userDefaults.object(forKey: Keys.includeClarifyingQuestions) == nil
@@ -282,7 +414,8 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
 
     return AppSettings(
       outputModeRawValue: outputMode,
-      promptStyleRawValue: promptStyle,
+      promptStyleRawValue: normalizedPromptStyle,
+      customPromptStyles: customPromptStyles,
       includeClarifyingQuestions: includeClarifyingQuestions,
       terminalModeEnabled: terminalModeEnabled,
       autoSelectAllOnTrigger: autoSelectAllOnTrigger,
@@ -300,11 +433,82 @@ final class UserDefaultsAppSettingsStore: ObservableObject {
       checkForUpdatesEnabled: checkForUpdatesEnabled
     )
   }
+
+  private func encodeCustomPromptStyles(_ styles: [CustomPromptStyle]) -> Data? {
+    try? JSONEncoder().encode(styles)
+  }
+
+  private static func sanitize(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private static func sanitizedCustomPromptStyleName(_ name: String) -> String? {
+    let sanitizedName = sanitize(name)
+    return sanitizedName.isEmpty ? nil : sanitizedName
+  }
+
+  private static func validatedCustomPromptStyle(
+    name: String,
+    prompt: String
+  ) -> ValidatedCustomPromptStyleResult {
+    guard let sanitizedName = sanitizedCustomPromptStyleName(name) else {
+      return .invalidName
+    }
+
+    let sanitizedPrompt = sanitize(prompt)
+    guard !sanitizedPrompt.isEmpty else {
+      return .invalidPrompt
+    }
+
+    return .valid(CustomPromptStyle(name: sanitizedName, prompt: sanitizedPrompt))
+  }
+
+  private static func decodeCustomPromptStyles(_ data: Data?) -> [CustomPromptStyle] {
+    guard let data else {
+      return AppSettings.default.customPromptStyles
+    }
+
+    return (try? JSONDecoder().decode([CustomPromptStyle].self, from: data))
+      ?? AppSettings.default.customPromptStyles
+  }
+
+  private static func normalizedPromptStyleRawValue(
+    _ rawValue: String,
+    customPromptStyles: [CustomPromptStyle]
+  ) -> String {
+    if let builtIn = PromptStyle(rawValue: rawValue) {
+      return builtIn.rawValue
+    }
+
+    guard case .custom(let selectedName)? = PromptStyleSelection.from(rawValue: rawValue) else {
+      return AppSettings.default.promptStyleRawValue
+    }
+
+    if let match = customPromptStyles.firstStyle(named: selectedName) {
+      return PromptStyleSelection.custom(name: match.name).rawValue
+    }
+
+    return AppSettings.default.promptStyleRawValue
+  }
+
+  private static func normalizePromptStyleSelection(_ settings: inout AppSettings) {
+    settings.promptStyleRawValue = normalizedPromptStyleRawValue(
+      settings.promptStyleRawValue,
+      customPromptStyles: settings.customPromptStyles
+    )
+  }
+}
+
+private enum ValidatedCustomPromptStyleResult {
+  case valid(CustomPromptStyle)
+  case invalidName
+  case invalidPrompt
 }
 
 private enum Keys {
   static let outputMode = "outputMode"
   static let promptStyle = "promptStyle"
+  static let customPromptStyles = "customPromptStyles"
   static let includeClarifyingQuestions = "includeClarifyingQuestions"
   static let terminalModeEnabled = "terminalModeEnabled"
   static let autoSelectAllOnTrigger = "autoSelectAllOnTrigger"

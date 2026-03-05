@@ -20,7 +20,11 @@ public struct PromptRefactorService: Sendable {
             "- Avoid adding assumptions that change meaning."
         ]
 
-        lines.append(contentsOf: styleInstructions(options.style))
+        if let customInstructions = customStyleInstructions(from: options.customStylePrompt) {
+            lines.append(customInstructions)
+        } else {
+            lines.append(contentsOf: styleInstructions(options.style))
+        }
 
         if options.includeClarifyingQuestions {
             lines.append("- If critical details are missing, end with up to 2 clarifying questions.")
@@ -109,6 +113,19 @@ public struct PromptRefactorService: Sendable {
                 "- Request ranked or tiered output (essential vs. optional) with an explicit scope constraint."
             ]
         }
+    }
+
+    private func customStyleInstructions(from prompt: String?) -> String? {
+        guard let prompt else {
+            return nil
+        }
+
+        let sanitized = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitized.isEmpty else {
+            return nil
+        }
+
+        return "- \(sanitized)"
     }
 
     private func stripFillerPhrases(from text: String) -> String {
