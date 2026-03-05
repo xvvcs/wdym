@@ -45,13 +45,26 @@ import Testing
         result.contains("If critical details are missing, end with up to 2 clarifying questions."))
 }
 
-@Test func clarifyPromptRemovesParenthesesAndStripsLeadingTrailingQuotes() {
+@Test func clarifyPromptPreservesParenthesesAndStripsLeadingTrailingQuotes() {
     let service = PromptRefactorService()
     let output = "\"Create a function (with error handling) that parses data.\""
 
     let clarified = service.clarifyPrompt(output)
 
-    #expect(clarified == "Create a function that parses data.")
+    #expect(clarified == "Create a function (with error handling) that parses data.")
+}
+
+@Test func clarifyPromptPreservesSemanticParentheticalContent() {
+    let service = PromptRefactorService()
+    let output =
+        "Write a script using Python (3.12) to connect via HTTPS (TLS 1.3) and fetch user records."
+
+    let clarified = service.clarifyPrompt(output)
+
+    #expect(
+        clarified
+            == "Write a script using Python (3.12) to connect via HTTPS (TLS 1.3) and fetch user records."
+    )
 }
 
 @Test func clarifyPromptStripsLeadingAndTrailingDoubleQuotes() {

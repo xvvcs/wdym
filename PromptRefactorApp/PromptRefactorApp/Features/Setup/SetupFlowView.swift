@@ -116,7 +116,11 @@ private struct AccessibilityStepView: View {
         }
         .task {
             while !runtime.isAccessibilityTrusted {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                do {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                } catch {
+                    return
+                }
                 runtime.pollAccessibilityState()
             }
         }
