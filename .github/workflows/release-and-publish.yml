@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Build unsigned app
         run: |
@@ -83,18 +85,26 @@ jobs:
           RELEASE_DATE=$(date -u +"%Y-%m-%d")
 
           # Changes since previous release
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          PREV_TAG=$(git tag --sort=-v:refname | awk -v current="${TAG}" '$0 != current { print; exit }')
           if [ -n "${PREV_TAG}" ]; then
-            COMMITS=$(git log "${PREV_TAG}..HEAD" --format="- %h %s")
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --reverse --format="- %s (%h)")
             COMMITS_HEADER="## Commits since ${PREV_TAG}"
           else
-            COMMITS=$(git log --format="- %h %s")
+            COMMITS=$(git log --reverse --format="- %s (%h)")
             COMMITS_HEADER="## Commits in this release"
           fi
 
+          GENERATE_NOTES_ARGS=(
+            --method POST
+            -f tag_name="${TAG}"
+          )
+
+          if [ -n "${PREV_TAG}" ]; then
+            GENERATE_NOTES_ARGS+=(-f previous_tag_name="${PREV_TAG}")
+          fi
+
           GENERATED=$(gh api "repos/${REPO}/releases/generate-notes" \
-            --method POST \
-            -f tag_name="${TAG}" \
+            "${GENERATE_NOTES_ARGS[@]}" \
             --jq '.body')
 
           {
