@@ -29,15 +29,15 @@ public struct PromptRefactorService: Sendable {
         return lines.joined(separator: "\n")
     }
 
-    /// Cleans refactored output by removing parentheses and stripping leading/trailing double
-    /// quotes. Preserves commas, periods, exclamation marks, and question marks.
+    /// Cleans refactored output by stripping leading/trailing double quotes and collapsing
+    /// extra whitespace. Preserves parenthesized content to avoid removing meaningful
+    /// constraints, qualifiers, or semantic annotations from the prompt.
     public func clarifyPrompt(_ outputText: String) -> String {
         var text = outputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             return ""
         }
 
-        text = text.replacingOccurrences(of: "\\([^)]*\\)", with: "", options: .regularExpression)
         text = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
