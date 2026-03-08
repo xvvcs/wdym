@@ -11,7 +11,7 @@ struct AppRuntimeControllerTests {
     let runtime = makeRuntime(initialAPIKey: "gsk_existing_key")
 
     #expect(runtime.hasStoredGroqAPIKey)
-    #expect(runtime.groqAPIKeyInput == "gsk_existing_key")
+    #expect(runtime.groqAPIKeyInput == "••••••••••••")
   }
 
   @Test func saveGroqApiKeyKeepsValueAndClearRemovesIt() {
@@ -21,7 +21,7 @@ struct AppRuntimeControllerTests {
     runtime.groqAPIKeyInput = "  gsk_new_key  "
     runtime.saveGroqAPIKey()
 
-    #expect(runtime.groqAPIKeyInput == "gsk_new_key")
+    #expect(runtime.groqAPIKeyInput == "••••••••••••")
     #expect(runtime.hasStoredGroqAPIKey)
     #expect(keychain.apiKey == "gsk_new_key")
 
@@ -30,6 +30,16 @@ struct AppRuntimeControllerTests {
     #expect(runtime.groqAPIKeyInput.isEmpty)
     #expect(!runtime.hasStoredGroqAPIKey)
     #expect(keychain.apiKey == nil)
+  }
+
+  @Test func savingPlaceholderDoesNotOverwriteKeychain() {
+    let keychain = InMemoryKeychainStore(apiKey: "gsk_abc")
+    let runtime = makeRuntime(initialAPIKey: "gsk_abc", keychain: keychain)
+
+    runtime.groqAPIKeyInput = "••••••••••••"
+    runtime.saveGroqAPIKey()
+
+    #expect(keychain.apiKey == "gsk_abc")
   }
 
   @Test func refactorNowUsesFocusedFieldAndReplacesPlusCopiesOutput() async {

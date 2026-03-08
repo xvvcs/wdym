@@ -1,11 +1,13 @@
 .DS_Store
+.worktrees/
 .build/
 build/
 .swiftpm/
 DerivedData/
 xcuserdata/
 *.xcuserstate
-
+*node_modules/
+opencode.jsonc
 # Local docs and plans (keep on disk, do not publish)
 AGENTS.md
 IMPLEMENTATION_PLAN.md

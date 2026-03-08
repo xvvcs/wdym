@@ -5,6 +5,48 @@ import Testing
 
 @MainActor
 struct KittyRemoteControlServiceTests {
+  @Test func checkConnectionReturnsUnavailableForPathWithDoubleDot() async {
+    let runner = SpyProcessRunner { _ in
+      ProcessExecutionResult(exitCode: 0, stdout: "[]", stderr: "")
+    }
+    let service = DefaultKittyRemoteControlService(processRunner: runner)
+
+    let status = await service.checkConnection(listenAddress: "unix:/tmp/../etc")
+
+    #expect(runner.calls.isEmpty)
+    if case .available = status {
+      Issue.record("Expected unavailable for path with .., got available")
+    }
+  }
+
+  @Test func checkConnectionReturnsUnavailableForRelativePath() async {
+    let runner = SpyProcessRunner { _ in
+      ProcessExecutionResult(exitCode: 0, stdout: "[]", stderr: "")
+    }
+    let service = DefaultKittyRemoteControlService(processRunner: runner)
+
+    let status = await service.checkConnection(listenAddress: "unix:foo/bar")
+
+    #expect(runner.calls.isEmpty)
+    if case .available = status {
+      Issue.record("Expected unavailable for relative path, got available")
+    }
+  }
+
+  @Test func checkConnectionReturnsUnavailableForPathOutsideTmp() async {
+    let runner = SpyProcessRunner { _ in
+      ProcessExecutionResult(exitCode: 0, stdout: "[]", stderr: "")
+    }
+    let service = DefaultKittyRemoteControlService(processRunner: runner)
+
+    let status = await service.checkConnection(listenAddress: "unix:/etc/passwd")
+
+    #expect(runner.calls.isEmpty)
+    if case .available = status {
+      Issue.record("Expected unavailable for path outside /tmp, got available")
+    }
+  }
+
   @Test func checkConnectionResolvesToHighestPidSocketWhenBasePathMissing() async throws {
     let fixture = try TempDirectoryFixture()
     defer { fixture.remove() }
@@ -391,7 +433,7 @@ private struct TempDirectoryFixture {
   private let rootURL: URL
 
   init() throws {
-    rootURL = fileManager.temporaryDirectory.appendingPathComponent(
+    rootURL = URL(fileURLWithPath: "/tmp").appendingPathComponent(
       "KittyRemoteControlServiceTests.\(UUID().uuidString)",
       isDirectory: true
     )

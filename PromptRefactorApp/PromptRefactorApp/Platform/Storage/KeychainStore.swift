@@ -41,10 +41,15 @@ struct DefaultKeychainStore: KeychainStore {
 
   func saveGroqAPIKey(_ apiKey: String) throws {
     let data = Data(apiKey.utf8)
+    let accessible = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 
+    let updateAttributes: [String: Any] = [
+      kSecValueData as String: data,
+      kSecAttrAccessible as String: accessible,
+    ]
     let updateStatus = SecItemUpdate(
       baseQuery as CFDictionary,
-      [kSecValueData as String: data] as CFDictionary
+      updateAttributes as CFDictionary
     )
 
     if updateStatus == errSecSuccess {
@@ -57,6 +62,7 @@ struct DefaultKeychainStore: KeychainStore {
 
     var createQuery = baseQuery
     createQuery[kSecValueData as String] = data
+    createQuery[kSecAttrAccessible as String] = accessible
     let addStatus = SecItemAdd(createQuery as CFDictionary, nil)
 
     guard addStatus == errSecSuccess else {

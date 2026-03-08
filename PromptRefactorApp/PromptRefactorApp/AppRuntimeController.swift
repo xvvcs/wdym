@@ -179,6 +179,9 @@ final class AppRuntimeController: ObservableObject {
 
   func saveGroqAPIKey() {
     let sanitized = groqAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard sanitized != storedKeyPlaceholder else {
+      return
+    }
     guard !sanitized.isEmpty else {
       groqAPIKeyMessage = "Enter a non-empty API key"
       return
@@ -186,7 +189,6 @@ final class AppRuntimeController: ObservableObject {
 
     do {
       try keychainStore.saveGroqAPIKey(sanitized)
-      groqAPIKeyInput = sanitized
       groqAPIKeyMessage = "Groq API key saved"
       refreshGroqAPIKeyState()
     } catch {
@@ -303,9 +305,7 @@ final class AppRuntimeController: ObservableObject {
         do {
           try focusedTextService.writeFocusedText(finalOutput)
           replaced = true
-        } catch {
-          replaced = false
-        }
+        } catch {}
 
       case .selectionCopy:
         clipboardService.writeString(finalOutput)
@@ -313,7 +313,7 @@ final class AppRuntimeController: ObservableObject {
         replaced = await textCommandService.pasteFromClipboard()
 
       case .clipboard:
-        replaced = false
+        break
       }
     }
 
@@ -624,13 +624,17 @@ final class AppRuntimeController: ObservableObject {
     }
   }
 
+  private let storedKeyPlaceholder = "••••••••••••"
+
   private func refreshGroqAPIKeyState() {
     let stored = keychainStore.loadGroqAPIKey() ?? ""
     let hasValue = !stored.isEmpty
     hasStoredGroqAPIKey = hasValue
 
     if hasValue {
-      groqAPIKeyInput = stored
+      groqAPIKeyInput = storedKeyPlaceholder
+    } else {
+      groqAPIKeyInput = ""
     }
   }
 
