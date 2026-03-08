@@ -420,11 +420,21 @@ struct DefaultKittyRemoteControlService: KittyRemoteControlService {
       return [sanitizedAddress]
     }
 
-    guard !fileManager.fileExists(atPath: socketPath) else {
+    guard socketPath.hasPrefix("/") else { return [] }
+    guard !socketPath.contains("..") else { return [] }
+    guard !socketPath.contains("\0") else { return [] }
+
+    let canonical = URL(fileURLWithPath: socketPath).resolvingSymlinksInPath().path
+    let isAllowed =
+      canonical == "/tmp" || canonical.hasPrefix("/tmp/")
+      || canonical == "/private/tmp" || canonical.hasPrefix("/private/tmp/")
+    guard isAllowed else { return [] }
+
+    guard !fileManager.fileExists(atPath: canonical) else {
       return [sanitizedAddress]
     }
 
-    let socketURL = URL(fileURLWithPath: socketPath)
+    let socketURL = URL(fileURLWithPath: canonical)
     let parentURL = socketURL.deletingLastPathComponent()
     let prefix = "\(socketURL.lastPathComponent)-"
 

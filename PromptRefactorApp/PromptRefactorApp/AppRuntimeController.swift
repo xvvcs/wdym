@@ -179,6 +179,9 @@ final class AppRuntimeController: ObservableObject {
 
   func saveGroqAPIKey() {
     let sanitized = groqAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard sanitized != storedKeyPlaceholder else {
+      return
+    }
     guard !sanitized.isEmpty else {
       groqAPIKeyMessage = "Enter a non-empty API key"
       return
@@ -186,7 +189,6 @@ final class AppRuntimeController: ObservableObject {
 
     do {
       try keychainStore.saveGroqAPIKey(sanitized)
-      groqAPIKeyInput = sanitized
       groqAPIKeyMessage = "Groq API key saved"
       refreshGroqAPIKeyState()
     } catch {
@@ -296,6 +298,7 @@ final class AppRuntimeController: ObservableObject {
     let outputMode = preferences.outputMode
     var replaced = false
     var copied = false
+    var writeFocusedTextFailed = false
 
     if outputMode.shouldReplaceText {
       switch source.kind {
@@ -304,7 +307,7 @@ final class AppRuntimeController: ObservableObject {
           try focusedTextService.writeFocusedText(finalOutput)
           replaced = true
         } catch {
-          replaced = false
+          writeFocusedTextFailed = true
         }
 
       case .selectionCopy:
@@ -313,7 +316,7 @@ final class AppRuntimeController: ObservableObject {
         replaced = await textCommandService.pasteFromClipboard()
 
       case .clipboard:
-        replaced = false
+        break
       }
     }
 
@@ -344,7 +347,9 @@ final class AppRuntimeController: ObservableObject {
     }
 
     if copied {
-      if outputMode.shouldReplaceText {
+      if writeFocusedTextFailed {
+        status = "Could not replace field; copied to clipboard"
+      } else if outputMode.shouldReplaceText {
         switch source.fallbackReason {
         case .accessibilityNotTrusted:
           status = "\(completionStatus) (accessibility not enabled; copied)"
@@ -624,13 +629,17 @@ final class AppRuntimeController: ObservableObject {
     }
   }
 
+  private let storedKeyPlaceholder = "••••••••••••"
+
   private func refreshGroqAPIKeyState() {
     let stored = keychainStore.loadGroqAPIKey() ?? ""
     let hasValue = !stored.isEmpty
     hasStoredGroqAPIKey = hasValue
 
     if hasValue {
-      groqAPIKeyInput = stored
+      groqAPIKeyInput = storedKeyPlaceholder
+    } else {
+      groqAPIKeyInput = ""
     }
   }
 

@@ -16,6 +16,10 @@ struct DefaultKeychainStore: KeychainStore {
   private let service = "wdym.promptrefactor"
   private let account = "groq_api_key"
 
+  // On macOS, kSecAttrAccessible is only respected when kSecUseDataProtectionKeychain is set.
+  // Using kSecUseDataProtectionKeychain causes KeychainStoreTests to fail in the test host;
+  // keychain entitlements or test-environment access needs investigation before enabling.
+
   func loadGroqAPIKey() -> String? {
     var query = baseQuery
     query[kSecReturnData as String] = true
@@ -41,10 +45,15 @@ struct DefaultKeychainStore: KeychainStore {
 
   func saveGroqAPIKey(_ apiKey: String) throws {
     let data = Data(apiKey.utf8)
+    let accessible = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 
+    let updateAttributes: [String: Any] = [
+      kSecValueData as String: data,
+      kSecAttrAccessible as String: accessible,
+    ]
     let updateStatus = SecItemUpdate(
       baseQuery as CFDictionary,
-      [kSecValueData as String: data] as CFDictionary
+      updateAttributes as CFDictionary
     )
 
     if updateStatus == errSecSuccess {
@@ -57,6 +66,7 @@ struct DefaultKeychainStore: KeychainStore {
 
     var createQuery = baseQuery
     createQuery[kSecValueData as String] = data
+    createQuery[kSecAttrAccessible as String] = accessible
     let addStatus = SecItemAdd(createQuery as CFDictionary, nil)
 
     guard addStatus == errSecSuccess else {
