@@ -16,6 +16,10 @@ struct DefaultKeychainStore: KeychainStore {
   private let service = "wdym.promptrefactor"
   private let account = "groq_api_key"
 
+  // On macOS, kSecAttrAccessible is only respected when kSecUseDataProtectionKeychain is set.
+  // Using kSecUseDataProtectionKeychain causes KeychainStoreTests to fail in the test host;
+  // keychain entitlements or test-environment access needs investigation before enabling.
+
   func loadGroqAPIKey() -> String? {
     var query = baseQuery
     query[kSecReturnData as String] = true

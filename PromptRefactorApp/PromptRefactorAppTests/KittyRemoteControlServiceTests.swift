@@ -47,6 +47,20 @@ struct KittyRemoteControlServiceTests {
     }
   }
 
+  @Test func checkConnectionReturnsUnavailableForPathWithNulByte() async {
+    let runner = SpyProcessRunner { _ in
+      ProcessExecutionResult(exitCode: 0, stdout: "[]", stderr: "")
+    }
+    let service = DefaultKittyRemoteControlService(processRunner: runner)
+
+    let status = await service.checkConnection(listenAddress: "unix:/tmp/foo\u{0}bar")
+
+    #expect(runner.calls.isEmpty)
+    if case .available = status {
+      Issue.record("Expected unavailable for path with NUL, got available")
+    }
+  }
+
   @Test func checkConnectionResolvesToHighestPidSocketWhenBasePathMissing() async throws {
     let fixture = try TempDirectoryFixture()
     defer { fixture.remove() }

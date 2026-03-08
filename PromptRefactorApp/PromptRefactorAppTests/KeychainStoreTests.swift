@@ -4,6 +4,9 @@ import Testing
 
 @testable import PromptRefactorApp
 
+/// Tests use the system Keychain for the app's service/account.
+/// `@Suite(.serialized)` prevents parallel runs; each test cleans up via
+/// `defer { try? store.deleteGroqAPIKey() }`.
 @Suite(.serialized)
 struct KeychainStoreTests {
   private let store = DefaultKeychainStore()

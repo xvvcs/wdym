@@ -298,6 +298,7 @@ final class AppRuntimeController: ObservableObject {
     let outputMode = preferences.outputMode
     var replaced = false
     var copied = false
+    var writeFocusedTextFailed = false
 
     if outputMode.shouldReplaceText {
       switch source.kind {
@@ -305,7 +306,9 @@ final class AppRuntimeController: ObservableObject {
         do {
           try focusedTextService.writeFocusedText(finalOutput)
           replaced = true
-        } catch {}
+        } catch {
+          writeFocusedTextFailed = true
+        }
 
       case .selectionCopy:
         clipboardService.writeString(finalOutput)
@@ -344,7 +347,9 @@ final class AppRuntimeController: ObservableObject {
     }
 
     if copied {
-      if outputMode.shouldReplaceText {
+      if writeFocusedTextFailed {
+        status = "Could not replace field; copied to clipboard"
+      } else if outputMode.shouldReplaceText {
         switch source.fallbackReason {
         case .accessibilityNotTrusted:
           status = "\(completionStatus) (accessibility not enabled; copied)"
