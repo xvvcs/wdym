@@ -40,7 +40,7 @@ import Testing
 
   #expect(result.contains("Task:"))
   #expect(result.contains("Create a function to parse csv files."))
-  #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
+  #expect(result.contains("Restructure the prompt with a clear goal sentence first"))
   #expect(
     result.contains("If critical details are missing, end with up to 2 clarifying questions."))
 }
@@ -114,7 +114,7 @@ import Testing
     options: RefactorBuildOptions(style: .coding, customStylePrompt: "   ")
   )
 
-  #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
+  #expect(result.contains("Restructure the prompt with a clear goal sentence first"))
 }
 
 @Test func buildPromptFallsBackToBuiltInStyleWhenCustomPromptIsNil() {
@@ -124,5 +124,5 @@ import Testing
     options: RefactorBuildOptions(style: .coding, customStylePrompt: nil)
   )
 
-  #expect(result.contains("Prefer technical precision and explicit implementation constraints."))
+  #expect(result.contains("Restructure the prompt with a clear goal sentence first"))
 }
