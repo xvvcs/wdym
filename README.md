@@ -45,10 +45,13 @@ No window switching. No copy-paste loops. Just better prompts, instantly.
 | ⌨️ **Global shortcut** | Trigger from any app with a fully customisable key combination |
 | ✏️ **Smart cleanup** | Removes filler words, fixes punctuation, and structures your intent |
 | 🤖 **AI refinement** | Optional Groq integration for fast, high-quality LLM polish |
-| 🎨 **Prompt styles** | General, Coding, Writing, Search, Research, Best Practices |
+| 🎨 **Prompt styles** | General, Coding, Writing, Search, Research, Best Practices — plus custom styles with your own instructions |
 | 🔁 **Style switch HUD** | Cycle prompt styles from a dedicated shortcut with an on-screen visual picker |
 | 📋 **Flexible output** | Replace in-field, copy to clipboard, or both — your choice |
-| 🐱 **Terminal-aware** | First-class Kitty/OpenCode support via remote control integration |
+| 📎 **Auto-refactor on paste** | Optionally refactor text whenever you paste, with per-app whitelist |
+| 🔊 **Sound cues** | Audio feedback for refactor started, completed, and failed |
+| 🐱 **Terminal-aware** | First-class Kitty/OpenCode support and terminal mode with adapted shortcuts |
+| 🔄 **Auto-update** | Checks GitHub releases and notifies you when a new version is available |
 | 🔒 **Privacy first** | No history, no analytics — keys in Keychain, prefs in UserDefaults |
 
 ---
@@ -114,12 +117,18 @@ All settings live in the **Options** panel in the menu bar.
 | Setting | Options |
 |---------|---------|
 | **Output mode** | Replace + Copy · Replace only · Copy only |
-| **Prompt style** | General · Coding · Writing · Search · Research · Best Practices |
-| **Style switch shortcut** | Dedicated global shortcut for cycling prompt styles with a transient HUD |
-| **Shortcut** | Choose a preset or record your own key combination |
+| **Prompt style** | General · Coding · Writing · Search · Research · Best Practices · Custom styles |
+| **Custom styles** | Create your own prompt styles with custom instructions |
+| **Style switch shortcut** | Dedicated global shortcut (default `Cmd+Control+]`) for cycling prompt styles with a transient HUD |
+| **Shortcut** | Choose a preset (`Cmd+Shift+R`, `Cmd+Option+R`, `Cmd+Shift+Space`) or record your own |
 | **AI refinement** | Enable Groq and enter your API key for LLM-powered polish |
-| **Groq model** | Speed-first default (`llama-3.1-8b-instant`), configurable |
-| **Auto-select** | Automatically select all text in focused field before capture |
+| **Groq model** | Llama 3.1 8B Instant (Fast, default) · Llama 3.3 70B Versatile (Balanced) |
+| **Clarifying questions** | Include follow-up clarifying questions in the refactored output (on by default) |
+| **Auto-select** | Automatically select all text in focused field before capture (on by default) |
+| **Terminal mode** | Adapted keyboard shortcuts for terminal apps (on by default) |
+| **Auto-refactor on paste** | Automatically refactor text when you paste, with a per-app whitelist (off by default) |
+| **Sound cues** | Audio feedback — start, success, and failure sounds (on by default) |
+| **Check for updates** | Periodically checks GitHub releases for new versions (on by default) |
 
 API keys are stored securely in **macOS Keychain**. All other preferences are stored in **UserDefaults** and never leave your machine.
 
